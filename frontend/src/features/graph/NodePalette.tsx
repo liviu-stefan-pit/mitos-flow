@@ -5,12 +5,16 @@ type NodePaletteProps = {
   onAddNode: (kind: NodeKind) => void;
   onDeleteSelected: () => void;
   hasSelection: boolean;
+  onNewWorkflow: () => void;
+  onResetDraft: () => void;
 };
 
 export function NodePalette({
   onAddNode,
   onDeleteSelected,
   hasSelection,
+  onNewWorkflow,
+  onResetDraft,
 }: NodePaletteProps) {
   return (
     <div className="node-palette" data-testid="node-palette">
@@ -37,6 +41,22 @@ export function NodePalette({
           onClick={onDeleteSelected}
         >
           Delete selected
+        </button>
+      </div>
+      <div className="node-palette-section node-palette-draft-actions">
+        <button
+          type="button"
+          data-testid="palette-new-workflow"
+          onClick={onNewWorkflow}
+        >
+          New Workflow
+        </button>
+        <button
+          type="button"
+          data-testid="palette-reset-draft"
+          onClick={onResetDraft}
+        >
+          Reset Draft
         </button>
       </div>
     </div>

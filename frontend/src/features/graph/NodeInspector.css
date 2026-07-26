@@ -1,0 +1,78 @@
+.node-inspector {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  width: 260px;
+  max-height: calc(100% - 24px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #c5c9d3;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  font-size: 0.8rem;
+}
+
+.node-inspector-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.node-inspector-kind {
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.node-inspector-hint {
+  color: #6b7280;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.node-inspector-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.node-inspector-field > span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.node-inspector-field input,
+.node-inspector-field textarea,
+.node-inspector-field select {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #c5c9d3;
+  background: #f8fafc;
+  color: #1a1a2e;
+  font: inherit;
+}
+
+.node-inspector-field textarea {
+  resize: vertical;
+  min-height: 4rem;
+}
+
+.node-inspector-readonly {
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #f3f4f6;
+  color: #4b5563;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+}

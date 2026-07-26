@@ -1,12 +1,11 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { DATA_IN_HANDLE } from "../handles";
+import type { ArtifactOutputNodeData } from "../nodeData";
 
-export type ArtifactOutputNodeData = {
-  label: string;
-};
+export type { ArtifactOutputNodeData };
 
 export function ArtifactOutputNode({ data }: NodeProps) {
-  const label = (data as ArtifactOutputNodeData).label;
+  const { label } = data as ArtifactOutputNodeData;
 
   return (
     <div className="graph-node graph-node-output" data-testid="node-output">

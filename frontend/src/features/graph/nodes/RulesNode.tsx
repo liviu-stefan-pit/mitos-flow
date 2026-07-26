@@ -1,12 +1,11 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { RESOURCE_OUT_HANDLE } from "../handles";
+import type { RulesNodeData } from "../nodeData";
 
-export type RulesNodeData = {
-  label: string;
-};
+export type { RulesNodeData };
 
 export function RulesNode({ data }: NodeProps) {
-  const label = (data as RulesNodeData).label;
+  const { label } = data as RulesNodeData;
 
   return (
     <div className="graph-node graph-node-rules" data-testid="node-rules">

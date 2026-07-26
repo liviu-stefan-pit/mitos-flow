@@ -14,7 +14,14 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import { validateConnection } from "./connectionValidator";
+import {
+  clearDraft,
+  draftToReactFlow,
+  loadDraft,
+  saveDraft,
+} from "./draftStorage";
 import { edgeTypes } from "./edges";
+import { NodeInspector } from "./NodeInspector";
 import { NodePalette } from "./NodePalette";
 import { createNode } from "./nodeFactory";
 import { nodeTypes } from "./nodes";
@@ -22,10 +29,15 @@ import { nodeKindFromFlowType, type NodeKind } from "./nodeKinds";
 import "./WorkflowCanvas.css";
 
 const FEEDBACK_MS = 4000;
+const WARNING_MS = 8000;
+
+const NEW_WORKFLOW_CONFIRM =
+  "Create a new workflow? The current canvas and saved draft will be cleared.";
+const RESET_DRAFT_CONFIRM =
+  "Reset the saved draft? The current canvas and browser draft will be cleared.";
 
 /**
- * Phase 6: typed edges (solid data-flow, dashed resource) with connection
- * rules. Canvas still starts empty each load (persistence is Phase 8).
+ * Phase 7–8: node inspector + versioned local draft persistence.
  */
 function WorkflowCanvasInner() {
   const { screenToFlowPosition } = useReactFlow();
@@ -33,7 +45,10 @@ function WorkflowCanvasInner() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [draftReady, setDraftReady] = useState(false);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showFeedback = useCallback((message: string) => {
     setFeedback(message);
@@ -41,11 +56,41 @@ function WorkflowCanvasInner() {
     feedbackTimer.current = setTimeout(() => setFeedback(null), FEEDBACK_MS);
   }, []);
 
+  const showWarning = useCallback((message: string) => {
+    setWarning(message);
+    if (warningTimer.current) clearTimeout(warningTimer.current);
+    warningTimer.current = setTimeout(() => setWarning(null), WARNING_MS);
+  }, []);
+
+  useEffect(() => {
+    const result = loadDraft();
+    if (result.status === "ok") {
+      const restored = draftToReactFlow(result.draft);
+      setNodes(restored.nodes);
+      setEdges(restored.edges);
+    } else if (result.status === "corrupt") {
+      clearDraft();
+      showWarning(result.warning);
+    }
+    setDraftReady(true);
+  }, [setNodes, setEdges, showWarning]);
+
+  useEffect(() => {
+    if (!draftReady) return;
+    saveDraft(nodes, edges);
+  }, [nodes, edges, draftReady]);
+
   useEffect(() => {
     return () => {
       if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+      if (warningTimer.current) clearTimeout(warningTimer.current);
     };
   }, []);
+
+  const selectedNode = useMemo(() => {
+    const selected = nodes.filter((node) => node.selected);
+    return selected.length === 1 ? selected[0] : null;
+  }, [nodes]);
 
   const hasSelection = useMemo(
     () =>
@@ -86,6 +131,35 @@ function WorkflowCanvasInner() {
       ),
     );
   }, [nodes, setNodes, setEdges]);
+
+  const handleUpdateNodeData = useCallback(
+    (nodeId: string, patch: Record<string, unknown>) => {
+      setNodes((current) =>
+        current.map((node) =>
+          node.id === nodeId
+            ? { ...node, data: { ...node.data, ...patch } }
+            : node,
+        ),
+      );
+    },
+    [setNodes],
+  );
+
+  const clearCanvasAndDraft = useCallback(() => {
+    setNodes([]);
+    setEdges([]);
+    clearDraft();
+  }, [setNodes, setEdges]);
+
+  const handleNewWorkflow = useCallback(() => {
+    if (!window.confirm(NEW_WORKFLOW_CONFIRM)) return;
+    clearCanvasAndDraft();
+  }, [clearCanvasAndDraft]);
+
+  const handleResetDraft = useCallback(() => {
+    if (!window.confirm(RESET_DRAFT_CONFIRM)) return;
+    clearCanvasAndDraft();
+  }, [clearCanvasAndDraft]);
 
   const resolveConnection = useCallback(
     (connection: Connection) => {
@@ -149,7 +223,6 @@ function WorkflowCanvasInner() {
         toHandle: { id?: string | null } | null;
       },
     ) => {
-      // User aimed at a node but the connection was rejected — show why.
       if (
         connectionState.fromNode &&
         connectionState.toNode &&
@@ -181,7 +254,10 @@ function WorkflowCanvasInner() {
         onAddNode={handleAddNode}
         onDeleteSelected={handleDeleteSelected}
         hasSelection={hasSelection}
+        onNewWorkflow={handleNewWorkflow}
+        onResetDraft={handleResetDraft}
       />
+      <NodeInspector node={selectedNode} onUpdateData={handleUpdateNodeData} />
       {feedback ? (
         <div
           className="connection-feedback"
@@ -189,6 +265,15 @@ function WorkflowCanvasInner() {
           role="status"
         >
           {feedback}
+        </div>
+      ) : null}
+      {warning ? (
+        <div
+          className="draft-warning"
+          data-testid="draft-warning"
+          role="alert"
+        >
+          {warning}
         </div>
       ) : null}
       <ReactFlow

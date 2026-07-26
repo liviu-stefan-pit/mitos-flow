@@ -53,3 +53,12 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.node-palette-draft-actions {
+  padding-top: 0.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.node-palette-draft-actions button {
+  width: 100%;
+}

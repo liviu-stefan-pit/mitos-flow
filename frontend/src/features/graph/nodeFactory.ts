@@ -1,4 +1,5 @@
 import type { Node, XYPosition } from "@xyflow/react";
+import { defaultNodeData } from "./nodeData";
 import { NODE_KIND_CONFIGS, type NodeKind } from "./nodeKinds";
 
 /** Small offset so consecutive adds near the same center don't fully overlap. */
@@ -31,6 +32,6 @@ export function createNode(
       x: center.x - nodeWidth / 2 + staggerIndex * STAGGER,
       y: center.y - nodeHeight / 2 + staggerIndex * STAGGER,
     },
-    data: { label: config.displayName },
+    data: defaultNodeData(kind, config.displayName),
   };
 }

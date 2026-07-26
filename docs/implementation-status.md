@@ -3,7 +3,7 @@
 > Running log of completed work. Update after each phase.
 
 **Last updated:** 2026-07-26  
-**Current phase:** 7 (next)
+**Current phase:** 9 (next)
 
 ---
 
@@ -18,6 +18,8 @@
 | 4 | 2026-07-26 | Read-only sample canvas |
 | 5 | 2026-07-26 | Add, select, move, and delete nodes |
 | 6 | 2026-07-26 | Typed edges and connection rules |
+| 7 | 2026-07-26 | Node inspector and editable labels |
+| 8 | 2026-07-26 | Local draft persistence |
 
 ---
 
@@ -105,6 +107,29 @@
 - Tests: `connectionValidator.test.ts` — 19 tests covering every source×target pair for both edge kinds, plus self-link / handle / direction cases; total frontend suite 28 passing
 - `tsc -b --noEmit` passes
 
+### Phase 7 — Node inspector and editable labels
+
+**Status:** Complete  
+**Date:** 2026-07-26
+
+- Added `nodeData.ts` with typed per-kind settings and defaults (label + kind-specific fields)
+- Added right-side `NodeInspector`: editable name for all kinds; Input (media type, content); Skill (description, read-only `wait_for_all`); KB/Rules (description); Artifact Output (mode: pass-through / selector / prompted)
+- Inspector shows when exactly one node is selected; empty state otherwise
+- Updates patch only the selected node's `data` (no cross-mutation)
+- Tests: inspector edit + select-switch isolation in `WorkflowCanvas.test.tsx`
+
+### Phase 8 — Local draft persistence
+
+**Status:** Complete  
+**Date:** 2026-07-26
+
+- Added versioned draft schema (`draftStorage.ts`, `version: 1`) under localStorage key `mitos-flow.workflow-draft`
+- Canvas auto-saves nodes (positions + settings) and edges after hydrate; reload restores the draft
+- Corrupt / unsupported / dangling-edge drafts fall back to empty canvas with a warning banner and clear the bad entry
+- Palette actions: **New Workflow** and **Reset Draft**, both gated by `window.confirm`, clear canvas + draft
+- Tests: `draftStorage.test.ts` (8) + canvas restore / corrupt / confirm flows; frontend suite 43 passing
+- `tsc -b --noEmit` passes
+
 ---
 
 ## Known issues
@@ -115,4 +140,4 @@ _None._
 
 ## Next up
 
-- Phase 7: Node inspector and editable labels
+- Phase 9: Backend workflow schema

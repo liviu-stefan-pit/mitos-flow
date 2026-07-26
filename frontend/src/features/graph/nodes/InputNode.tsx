@@ -1,12 +1,11 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { DATA_OUT_HANDLE } from "../handles";
+import type { InputNodeData } from "../nodeData";
 
-export type InputNodeData = {
-  label: string;
-};
+export type { InputNodeData };
 
 export function InputNode({ data }: NodeProps) {
-  const label = (data as InputNodeData).label;
+  const { label } = data as InputNodeData;
 
   return (
     <div className="graph-node graph-node-input" data-testid="node-input">

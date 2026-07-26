@@ -3,7 +3,7 @@
 > **Purpose of this document:** Single source of truth for what Mitos Flow is, how it should be built, and which phase is done. Update checkboxes as phases complete. Point every implementation chat at this file first.
 
 **Last updated:** 2026-07-26  
-**Current phase:** 7 (next)  
+**Current phase:** 9 (next)  
 **Stack:** Local React/Vite frontend + FastAPI backend · Cursor CLI first · Fake runner before real CLI
 
 ---
@@ -113,7 +113,7 @@ Rules:
 | Milestone | Phases | Status |
 | --- | --- | --- |
 | Foundation | 0–3 | [x] |
-| Graph editor | 4–8 | [ ] |
+| Graph editor | 4–8 | [x] |
 | Shared workflow model | 9–10 | [ ] |
 | Deterministic execution | 11–16 | [ ] |
 | Reusable local assets | 17–20 | [ ] |
@@ -173,13 +173,13 @@ Rules:
   - **Gate:** Connection-validator unit tests cover every allowed/rejected pair
   - **Manual check:** Invalid connections are blocked in UI with clear feedback
 
-- [ ] **Phase 7 — Node inspector and editable labels**
+- [x] **Phase 7 — Node inspector and editable labels**
   - Side inspector with node name and kind-specific fields
   - Changes stay in frontend memory
   - **Gate:** Edit/select tests pass; nodes do not cross-mutate
   - **Manual check:** Edit a node label; select another node; first node unchanged
 
-- [ ] **Phase 8 — Local draft persistence**
+- [x] **Phase 8 — Local draft persistence**
   - Versioned browser-local draft schema; New Workflow and Reset Draft with confirmations
   - **Gate:** Reload restores positions/settings; corrupt data falls back with warning
   - **Manual check:** Build graph, reload page, graph restored
@@ -421,8 +421,8 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 4 | 2026-07-26 | Read-only @xyflow sample: Input → Skill → Artifact Output |
 | 5 | 2026-07-26 | Node palette (5 kinds); add/select/move/delete; canvas starts empty each load |
 | 6 | 2026-07-26 | Solid data + dashed resource edges; connection validator |
-| 7 | | |
-| 8 | | |
+| 7 | 2026-07-26 | Side inspector; kind-specific editable fields; no cross-mutation |
+| 8 | 2026-07-26 | Versioned localStorage draft; New Workflow / Reset Draft |
 | 9 | | |
 | 10 | | |
 | 11 | | |

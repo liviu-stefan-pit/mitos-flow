@@ -4,13 +4,12 @@ import {
   DATA_OUT_HANDLE,
   RESOURCE_IN_HANDLE,
 } from "../handles";
+import type { SkillNodeData } from "../nodeData";
 
-export type SkillNodeData = {
-  label: string;
-};
+export type { SkillNodeData };
 
 export function SkillNode({ data }: NodeProps) {
-  const label = (data as SkillNodeData).label;
+  const { label } = data as SkillNodeData;
 
   return (
     <div className="graph-node graph-node-skill" data-testid="node-skill">
