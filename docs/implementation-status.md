@@ -3,7 +3,7 @@
 > Running log of completed work. Update after each phase.
 
 **Last updated:** 2026-07-26  
-**Current phase:** 6 (next)
+**Current phase:** 7 (next)
 
 ---
 
@@ -17,6 +17,7 @@
 | 3 | 2026-07-26 | Unified local development command |
 | 4 | 2026-07-26 | Read-only sample canvas |
 | 5 | 2026-07-26 | Add, select, move, and delete nodes |
+| 6 | 2026-07-26 | Typed edges and connection rules |
 
 ---
 
@@ -90,6 +91,20 @@
 - Tests: `WorkflowCanvas.test.tsx` (5 tests: empty start, palette presence, add each kind, delete selected, draggable/selectable classes) + updated `App.test.tsx` — 9 frontend tests passing
 - `tsc -b --noEmit` passes
 
+### Phase 6 — Typed edges and connection rules
+
+**Status:** Complete  
+**Date:** 2026-07-26
+
+- Added typed handles: `data-out` / `data-in` (slate) and `resource-out` / `resource-in` (amber) on the five node kinds
+- Skill exposes data in/out plus a bottom resource-in handle for KB/Rules attachments
+- Added `connectionValidator.ts` — pure allow/reject rules for data-flow (Input→Skill, Skill→Skill, Skill→Artifact Output) and resource (KB→Skill, Rules→Skill); rejects self-links, handle mismatches, and invalid pairs with a clear reason string
+- Added custom edge renderers: solid `dataFlow`, dashed `resourceAttachment` (`edges.tsx`)
+- `WorkflowCanvas` enables `nodesConnectable`; `isValidConnection` + `onConnect` enforce rules; rejected drops show a red banner (`connection-feedback`)
+- Delete selected also removes selected edges and edges attached to deleted nodes
+- Tests: `connectionValidator.test.ts` — 19 tests covering every source×target pair for both edge kinds, plus self-link / handle / direction cases; total frontend suite 28 passing
+- `tsc -b --noEmit` passes
+
 ---
 
 ## Known issues
@@ -100,4 +115,4 @@ _None._
 
 ## Next up
 
-- Phase 6: Typed edges and connection rules
+- Phase 7: Node inspector and editable labels

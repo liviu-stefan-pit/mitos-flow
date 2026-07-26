@@ -33,3 +33,15 @@ export const NODE_KIND_CONFIGS: NodeKindConfig[] = [
     displayName: "Artifact Output",
   },
 ];
+
+const FLOW_TYPE_TO_KIND: Record<string, NodeKind> = Object.fromEntries(
+  NODE_KIND_CONFIGS.map((c) => [c.flowType, c.kind]),
+) as Record<string, NodeKind>;
+
+/** Resolve a React Flow node `type` string back to a domain NodeKind. */
+export function nodeKindFromFlowType(
+  flowType: string | undefined,
+): NodeKind | null {
+  if (!flowType) return null;
+  return FLOW_TYPE_TO_KIND[flowType] ?? null;
+}

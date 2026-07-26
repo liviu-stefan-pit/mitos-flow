@@ -52,8 +52,32 @@
 .graph-node .react-flow__handle {
   width: 8px;
   height: 8px;
-  background: #64748b;
   border: 2px solid #fff;
+}
+
+.graph-node .handle-data {
+  background: #64748b;
+}
+
+.graph-node .handle-resource {
+  background: #f59e0b;
+}
+
+.connection-feedback {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  max-width: min(480px, calc(100% - 24px));
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.8rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
 }
 
 /* Reset React Flow wrapper chrome so only our custom node styles show */

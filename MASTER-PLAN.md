@@ -3,7 +3,7 @@
 > **Purpose of this document:** Single source of truth for what Mitos Flow is, how it should be built, and which phase is done. Update checkboxes as phases complete. Point every implementation chat at this file first.
 
 **Last updated:** 2026-07-26  
-**Current phase:** 6 (next)  
+**Current phase:** 7 (next)  
 **Stack:** Local React/Vite frontend + FastAPI backend · Cursor CLI first · Fake runner before real CLI
 
 ---
@@ -167,7 +167,7 @@ Rules:
   - **Gate:** UI tests for add/delete; refresh confirms state not persisted yet
   - **Manual check:** Add and delete nodes; reload clears canvas
 
-- [ ] **Phase 6 — Typed edges and connection rules**
+- [x] **Phase 6 — Typed edges and connection rules**
   - Solid data edges + dashed resource-attachment edges
   - Enforce allowed connections; reject self-links and invalid direction
   - **Gate:** Connection-validator unit tests cover every allowed/rejected pair
@@ -420,7 +420,7 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 3 | 2026-07-26 | npm run dev starts both services, CORS configured |
 | 4 | 2026-07-26 | Read-only @xyflow sample: Input → Skill → Artifact Output |
 | 5 | 2026-07-26 | Node palette (5 kinds); add/select/move/delete; canvas starts empty each load |
-| 6 | | |
+| 6 | 2026-07-26 | Solid data + dashed resource edges; connection validator |
 | 7 | | |
 | 8 | | |
 | 9 | | |
