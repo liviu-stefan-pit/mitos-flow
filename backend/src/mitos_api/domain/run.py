@@ -16,6 +16,7 @@ class NodeRunState(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     SKIPPED = "skipped"
+    BLOCKED = "blocked"
 
 
 class RunRequest(BaseModel):

@@ -1,0 +1,97 @@
+{
+  "metadata": {
+    "name": "Two named inputs join",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "input-a",
+      "kind": "input",
+      "label": "Brief",
+      "position": { "x": 0, "y": -40 },
+      "settings": {
+        "mediaType": "text/plain",
+        "content": "Hello A"
+      }
+    },
+    {
+      "id": "input-b",
+      "kind": "input",
+      "label": "Context",
+      "position": { "x": 0, "y": 40 },
+      "settings": {
+        "mediaType": "text/plain",
+        "content": "Hello B"
+      }
+    },
+    {
+      "id": "skill-1",
+      "kind": "skill",
+      "label": "Draft",
+      "position": { "x": 220, "y": 0 },
+      "ports": [
+        {
+          "id": "brief",
+          "kind": "data",
+          "direction": "in",
+          "name": "brief"
+        },
+        {
+          "id": "context",
+          "kind": "data",
+          "direction": "in",
+          "name": "context"
+        },
+        {
+          "id": "data-out",
+          "kind": "data",
+          "direction": "out"
+        },
+        {
+          "id": "resource-in",
+          "kind": "resource",
+          "direction": "in"
+        }
+      ],
+      "settings": {
+        "description": "Needs both briefs",
+        "joinPolicy": "wait_for_all"
+      }
+    },
+    {
+      "id": "output-1",
+      "kind": "artifactOutput",
+      "label": "Out",
+      "position": { "x": 440, "y": 0 },
+      "settings": {
+        "mode": "pass-through"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-a",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "brief"
+    },
+    {
+      "id": "e2",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-b",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "context"
+    },
+    {
+      "id": "e3",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-1",
+      "targetNodeId": "output-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    }
+  ]
+}

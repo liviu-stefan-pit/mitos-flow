@@ -3,7 +3,7 @@
 > **Purpose of this document:** Single source of truth for what Mitos Flow is, how it should be built, and which phase is done. Update checkboxes as phases complete. Point every implementation chat at this file first.
 
 **Last updated:** 2026-07-26  
-**Current phase:** 12 (next)  
+**Current phase:** 15 (next)  
 **Stack:** Local React/Vite frontend + FastAPI backend · Cursor CLI first · Fake runner before real CLI
 
 ---
@@ -210,19 +210,19 @@ Rules:
   - **Gate:** Integration test proves exact I/O and node states; unsupported graphs rejected
   - **Manual check:** Run simplest flow; see predictable fake output
 
-- [ ] **Phase 12 — DAG scheduler for linear chains**
+- [x] **Phase 12 — DAG scheduler for linear chains**
   - Topological scheduling for Input → multiple Skills → Output
   - Sequential execution; no branches or joins yet
   - **Gate:** Execution order and failure-stop behavior unit-tested
   - **Manual check:** 3-node chain runs in correct order
 
-- [ ] **Phase 13 — Branching and passive outputs**
+- [x] **Phase 13 — Branching and passive outputs**
   - One Skill output → multiple passive Artifact Outputs
   - Immutable per-node results; branches get same upstream payload
   - **Gate:** Three-output integration fixture; no extra runner calls
   - **Manual check:** One Skill feeds three outputs; all receive same data
 
-- [ ] **Phase 14 — Multiple named inputs with wait-for-all**
+- [x] **Phase 14 — Multiple named inputs with wait-for-all**
   - Named input ports + `InputEnvelope` (payload, media type, source, port, ordering)
   - Only `wait_for_all` join policy
   - **Gate:** Arrival order does not alter envelope; missing inputs → blocked-node error
@@ -426,9 +426,9 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 9 | 2026-07-26 | Pydantic workflow schema + POST /api/workflows/validate |
 | 10 | 2026-07-26 | TS domain types, UI→domain mapper, export/validate in UI |
 | 11 | 2026-07-26 | Fake runner + POST /api/runs for Input→Skill→Output |
-| 12 | | |
-| 13 | | |
-| 14 | | |
+| 12 | 2026-07-26 | DAG scheduler for linear Skill chains; failure-stop |
+| 13 | 2026-07-26 | Skill→N pass-through outputs; one runner call; three_outputs fixture |
+| 14 | 2026-07-26 | Named input ports + InputEnvelope; wait_for_all joins; blocked on missing |
 | 15 | | |
 | 16 | | |
 | 17 | | |

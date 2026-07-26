@@ -41,6 +41,23 @@ class ArtifactOutputMode(str, Enum):
     PROMPTED = "prompted"
 
 
+class InputEnvelope(BaseModel):
+    """
+    One named input delivered to a Skill (Phase 14+).
+
+    ``order`` records arrival sequence for trace display and does not affect
+    wait_for_all join logic or FakeRunner output.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    port: str = Field(min_length=1)
+    payload: str
+    mediaType: str = "text/plain"
+    sourceNodeId: str = Field(min_length=1)
+    order: int = Field(ge=0)
+
+
 class Position(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

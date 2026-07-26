@@ -40,5 +40,5 @@ def validate_workflow_endpoint(workflow: Workflow) -> WorkflowValidationResult:
 
 @app.post("/api/runs", response_model=RunResponse)
 def create_run(request: RunRequest) -> RunResponse:
-    """Execute a supported workflow synchronously (fake runner, Phase 11)."""
+    """Execute a supported workflow synchronously (fake runner, Phase 13)."""
     return execute_run(request.workflow)

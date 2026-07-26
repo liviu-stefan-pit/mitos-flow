@@ -1,0 +1,90 @@
+{
+  "metadata": {
+    "name": "Unsupported mixed Skill and Output branch",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "kind": "input",
+      "label": "Brief",
+      "position": { "x": 0, "y": 0 },
+      "settings": {
+        "mediaType": "text/plain",
+        "content": "Hello"
+      }
+    },
+    {
+      "id": "skill-1",
+      "kind": "skill",
+      "label": "Draft",
+      "position": { "x": 200, "y": 0 },
+      "settings": {
+        "description": "Draft",
+        "joinPolicy": "wait_for_all"
+      }
+    },
+    {
+      "id": "skill-2",
+      "kind": "skill",
+      "label": "Polish",
+      "position": { "x": 400, "y": -40 },
+      "settings": {
+        "description": "Polish",
+        "joinPolicy": "wait_for_all"
+      }
+    },
+    {
+      "id": "output-1",
+      "kind": "artifactOutput",
+      "label": "Early out",
+      "position": { "x": 400, "y": 40 },
+      "settings": {
+        "mode": "pass-through"
+      }
+    },
+    {
+      "id": "output-2",
+      "kind": "artifactOutput",
+      "label": "Final out",
+      "position": { "x": 600, "y": -40 },
+      "settings": {
+        "mode": "pass-through"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-1",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e2",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-1",
+      "targetNodeId": "skill-2",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e3",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-1",
+      "targetNodeId": "output-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e4",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-2",
+      "targetNodeId": "output-2",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    }
+  ]
+}

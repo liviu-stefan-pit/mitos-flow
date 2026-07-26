@@ -1,0 +1,73 @@
+{
+  "metadata": {
+    "name": "Unsupported join",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "kind": "input",
+      "label": "Brief A",
+      "position": { "x": 0, "y": -40 },
+      "settings": {
+        "mediaType": "text/plain",
+        "content": "Hello A"
+      }
+    },
+    {
+      "id": "input-2",
+      "kind": "input",
+      "label": "Brief B",
+      "position": { "x": 0, "y": 40 },
+      "settings": {
+        "mediaType": "text/plain",
+        "content": "Hello B"
+      }
+    },
+    {
+      "id": "skill-1",
+      "kind": "skill",
+      "label": "Draft",
+      "position": { "x": 220, "y": 0 },
+      "settings": {
+        "description": "Needs both",
+        "joinPolicy": "wait_for_all"
+      }
+    },
+    {
+      "id": "output-1",
+      "kind": "artifactOutput",
+      "label": "Out",
+      "position": { "x": 440, "y": 0 },
+      "settings": {
+        "mode": "pass-through"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-1",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e2",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-2",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e3",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-1",
+      "targetNodeId": "output-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    }
+  ]
+}

@@ -1,10 +1,12 @@
-"""Runner interface for Skill execution (Phase 11)."""
+"""Runner interface for Skill execution (Phase 11+)."""
 
 from __future__ import annotations
 
 from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from mitos_api.domain.workflow import InputEnvelope
 
 
 class SkillExecutionRequest(BaseModel):
@@ -15,8 +17,9 @@ class SkillExecutionRequest(BaseModel):
     skillNodeId: str = Field(min_length=1)
     skillLabel: str
     description: str = ""
-    inputPayload: str
+    inputPayload: str = ""
     inputMediaType: str = "text/plain"
+    inputs: list[InputEnvelope] = Field(default_factory=list)
 
 
 class SkillExecutionResult(BaseModel):

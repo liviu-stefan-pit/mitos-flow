@@ -1,0 +1,107 @@
+{
+  "metadata": {
+    "name": "Linear chain with three passive outputs",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "kind": "input",
+      "label": "Brief",
+      "position": { "x": 0, "y": 0 },
+      "settings": {
+        "mediaType": "text/plain",
+        "content": "Hello from input"
+      }
+    },
+    {
+      "id": "skill-1",
+      "kind": "skill",
+      "label": "Draft",
+      "position": { "x": 200, "y": 0 },
+      "settings": {
+        "description": "First",
+        "joinPolicy": "wait_for_all"
+      }
+    },
+    {
+      "id": "skill-2",
+      "kind": "skill",
+      "label": "Polish",
+      "position": { "x": 400, "y": 0 },
+      "settings": {
+        "description": "Second",
+        "joinPolicy": "wait_for_all"
+      }
+    },
+    {
+      "id": "output-1",
+      "kind": "artifactOutput",
+      "label": "Out A",
+      "position": { "x": 600, "y": -80 },
+      "settings": {
+        "mode": "pass-through"
+      }
+    },
+    {
+      "id": "output-2",
+      "kind": "artifactOutput",
+      "label": "Out B",
+      "position": { "x": 600, "y": 0 },
+      "settings": {
+        "mode": "pass-through"
+      }
+    },
+    {
+      "id": "output-3",
+      "kind": "artifactOutput",
+      "label": "Out C",
+      "position": { "x": 600, "y": 80 },
+      "settings": {
+        "mode": "pass-through"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-1",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e2",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-1",
+      "targetNodeId": "skill-2",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e3",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-2",
+      "targetNodeId": "output-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e4",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-2",
+      "targetNodeId": "output-2",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e5",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-2",
+      "targetNodeId": "output-3",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    }
+  ]
+}
