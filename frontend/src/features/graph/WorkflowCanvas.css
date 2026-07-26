@@ -1,0 +1,68 @@
+.workflow-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.graph-node {
+  min-width: 160px;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #c5c9d3;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  font-size: 0.875rem;
+}
+
+.graph-node-kind {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.graph-node-label {
+  font-weight: 500;
+  color: #1a1a2e;
+}
+
+.graph-node-input {
+  border-left: 3px solid #3b82f6;
+}
+
+.graph-node-skill {
+  border-left: 3px solid #8b5cf6;
+}
+
+.graph-node-output {
+  border-left: 3px solid #10b981;
+}
+
+.graph-node .react-flow__handle {
+  width: 8px;
+  height: 8px;
+  background: #64748b;
+  border: 2px solid #fff;
+}
+
+/* Reset React Flow wrapper chrome so only our custom node styles show */
+.workflow-canvas .react-flow__node {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+  width: auto !important;
+  font-size: inherit;
+}
+
+.workflow-canvas .react-flow__node.selected,
+.workflow-canvas .react-flow__node:focus,
+.workflow-canvas .react-flow__node:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
