@@ -1,0 +1,32 @@
+{
+  "metadata": {
+    "name": "Invalid edge kind",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "kind": "input",
+      "label": "Input",
+      "position": { "x": 0, "y": 0 },
+      "settings": { "mediaType": "text/plain", "content": "" }
+    },
+    {
+      "id": "output-1",
+      "kind": "artifactOutput",
+      "label": "Output",
+      "position": { "x": 200, "y": 0 },
+      "settings": { "mode": "pass-through" }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-invalid",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-1",
+      "targetNodeId": "output-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    }
+  ]
+}

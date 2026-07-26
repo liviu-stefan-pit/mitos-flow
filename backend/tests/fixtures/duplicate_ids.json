@@ -1,0 +1,47 @@
+{
+  "metadata": {
+    "name": "Duplicate IDs",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "kind": "input",
+      "label": "First",
+      "position": { "x": 0, "y": 0 },
+      "settings": { "mediaType": "text/plain", "content": "a" }
+    },
+    {
+      "id": "input-1",
+      "kind": "input",
+      "label": "Second",
+      "position": { "x": 100, "y": 0 },
+      "settings": { "mediaType": "text/plain", "content": "b" }
+    },
+    {
+      "id": "skill-1",
+      "kind": "skill",
+      "label": "Skill",
+      "position": { "x": 200, "y": 0 },
+      "settings": { "description": "", "joinPolicy": "wait_for_all" }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-dup",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-1",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e-dup",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-1",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    }
+  ]
+}

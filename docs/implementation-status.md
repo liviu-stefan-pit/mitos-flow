@@ -3,7 +3,7 @@
 > Running log of completed work. Update after each phase.
 
 **Last updated:** 2026-07-26  
-**Current phase:** 9 (next)
+**Current phase:** 11 (next)
 
 ---
 
@@ -20,6 +20,8 @@
 | 6 | 2026-07-26 | Typed edges and connection rules |
 | 7 | 2026-07-26 | Node inspector and editable labels |
 | 8 | 2026-07-26 | Local draft persistence |
+| 9 | 2026-07-26 | Backend workflow schema + validate endpoint |
+| 10 | 2026-07-26 | Frontend/backend schema round-trip |
 
 ---
 
@@ -130,6 +132,29 @@
 - Tests: `draftStorage.test.ts` (8) + canvas restore / corrupt / confirm flows; frontend suite 43 passing
 - `tsc -b --noEmit` passes
 
+### Phase 9 — Backend workflow schema
+
+**Status:** Complete  
+**Date:** 2026-07-26
+
+- Added Pydantic models in `backend/src/mitos_api/domain/` (`Workflow`, nodes, edges, ports, metadata, kind-specific settings)
+- Added structural validator: duplicate IDs, dangling edges, invalid edge kinds/pairs, self-links, data-flow cycles
+- `POST /api/workflows/validate` returns `{ valid, errors, workflow }` (no save, no execute)
+- Fixtures: `valid_linear`, `cycle`, `dangling_edge`, `duplicate_ids`, `invalid_edge_kind`
+- Backend tests: 12 passing
+
+### Phase 10 — Frontend/backend schema round-trip
+
+**Status:** Complete  
+**Date:** 2026-07-26
+
+- Matching TypeScript domain types in `frontend/src/domain/workflow.ts`
+- Explicit UI→domain mapper `toDomainWorkflow.ts` (React Flow shapes → shared Workflow JSON)
+- `validateApi.ts` client for `POST /api/workflows/validate`
+- Palette: **Export JSON** and **Validate with API**; bottom-right panel shows domain JSON + validation result
+- Tests: mapper settings preservation, mocked API round-trip, canvas export/validate; frontend suite 47 passing
+- `tsc -b --noEmit` passes
+
 ---
 
 ## Known issues
@@ -140,4 +165,4 @@ _None._
 
 ## Next up
 
-- Phase 9: Backend workflow schema
+- Phase 11: Fake runner for one Skill

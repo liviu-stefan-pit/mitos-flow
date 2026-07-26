@@ -1,0 +1,25 @@
+{
+  "metadata": {
+    "name": "Dangling edge",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "kind": "input",
+      "label": "Input",
+      "position": { "x": 0, "y": 0 },
+      "settings": { "mediaType": "text/plain", "content": "" }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-dangling",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-1",
+      "targetNodeId": "skill-missing",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    }
+  ]
+}

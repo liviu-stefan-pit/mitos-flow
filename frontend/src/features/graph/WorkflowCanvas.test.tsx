@@ -263,4 +263,39 @@ describe("WorkflowCanvas", () => {
     expect(confirmSpy).toHaveBeenCalled();
     expect(screen.queryByTestId("node-rules")).not.toBeInTheDocument();
   });
+
+  it("exports domain JSON and validates it via the API", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body ?? "{}"));
+        return new Response(
+          JSON.stringify({ valid: true, errors: [], workflow: body }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }),
+    );
+
+    render(<WorkflowCanvas />);
+    fireEvent.click(screen.getByTestId("palette-add-input"));
+    fireEvent.click(screen.getByTestId("node-input"));
+    fireEvent.change(screen.getByTestId("inspector-content"), {
+      target: { value: "hello export" },
+    });
+
+    fireEvent.click(screen.getByTestId("palette-export-workflow"));
+    const exportPanel = await screen.findByTestId("workflow-export-panel");
+    expect(exportPanel).toHaveTextContent("hello export");
+
+    fireEvent.click(screen.getByTestId("palette-validate-workflow"));
+    const result = await screen.findByTestId("workflow-validation-result");
+    expect(result).toHaveTextContent(/Valid/);
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/workflows/validate"),
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
 });

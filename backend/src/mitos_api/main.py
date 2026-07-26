@@ -3,6 +3,8 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from mitos_api.domain import Workflow, WorkflowValidationResult, validate_workflow
+
 app = FastAPI(title="Mitos Flow API", version="0.1.0")
 
 extra_origins = os.getenv("CORS_ORIGINS", "").split(",")
@@ -21,3 +23,9 @@ app.add_middleware(
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+@app.post("/api/workflows/validate", response_model=WorkflowValidationResult)
+def validate_workflow_endpoint(workflow: Workflow) -> WorkflowValidationResult:
+    """Validate a workflow document. Does not save or execute."""
+    return validate_workflow(workflow)

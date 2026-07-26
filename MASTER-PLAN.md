@@ -3,7 +3,7 @@
 > **Purpose of this document:** Single source of truth for what Mitos Flow is, how it should be built, and which phase is done. Update checkboxes as phases complete. Point every implementation chat at this file first.
 
 **Last updated:** 2026-07-26  
-**Current phase:** 9 (next)  
+**Current phase:** 11 (next)  
 **Stack:** Local React/Vite frontend + FastAPI backend · Cursor CLI first · Fake runner before real CLI
 
 ---
@@ -114,7 +114,7 @@ Rules:
 | --- | --- | --- |
 | Foundation | 0–3 | [x] |
 | Graph editor | 4–8 | [x] |
-| Shared workflow model | 9–10 | [ ] |
+| Shared workflow model | 9–10 | [x] |
 | Deterministic execution | 11–16 | [ ] |
 | Reusable local assets | 17–20 | [ ] |
 | Cursor CLI adapter | 21–24 | [ ] |
@@ -188,13 +188,13 @@ Rules:
 
 ### Shared workflow model
 
-- [ ] **Phase 9 — Backend workflow schema**
+- [x] **Phase 9 — Backend workflow schema**
   - Pydantic models in `backend/src/mitos_api/domain/` for nodes, edges, ports, metadata
   - `POST /api/workflows/validate` only (no save, no execute)
   - **Gate:** Fixtures for valid graphs, cycles, dangling edges, duplicate IDs, invalid edge kinds
   - **Manual check:** POST a sample workflow JSON; receive validation result
 
-- [ ] **Phase 10 — Frontend/backend schema round-trip**
+- [x] **Phase 10 — Frontend/backend schema round-trip**
   - Matching TypeScript domain types and API serialization
   - Explicit mapping from UI graph shapes to domain model
   - **Gate:** Representative workflow validates via API without losing settings
@@ -423,8 +423,8 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 6 | 2026-07-26 | Solid data + dashed resource edges; connection validator |
 | 7 | 2026-07-26 | Side inspector; kind-specific editable fields; no cross-mutation |
 | 8 | 2026-07-26 | Versioned localStorage draft; New Workflow / Reset Draft |
-| 9 | | |
-| 10 | | |
+| 9 | 2026-07-26 | Pydantic workflow schema + POST /api/workflows/validate |
+| 10 | 2026-07-26 | TS domain types, UI→domain mapper, export/validate in UI |
 | 11 | | |
 | 12 | | |
 | 13 | | |

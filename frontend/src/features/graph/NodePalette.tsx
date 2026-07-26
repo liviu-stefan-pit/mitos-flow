@@ -7,6 +7,9 @@ type NodePaletteProps = {
   hasSelection: boolean;
   onNewWorkflow: () => void;
   onResetDraft: () => void;
+  onExportWorkflow: () => void;
+  onValidateWorkflow: () => void;
+  validating?: boolean;
 };
 
 export function NodePalette({
@@ -15,6 +18,9 @@ export function NodePalette({
   hasSelection,
   onNewWorkflow,
   onResetDraft,
+  onExportWorkflow,
+  onValidateWorkflow,
+  validating = false,
 }: NodePaletteProps) {
   return (
     <div className="node-palette" data-testid="node-palette">
@@ -57,6 +63,24 @@ export function NodePalette({
           onClick={onResetDraft}
         >
           Reset Draft
+        </button>
+      </div>
+      <div className="node-palette-section node-palette-api-actions">
+        <span className="node-palette-label">Workflow API</span>
+        <button
+          type="button"
+          data-testid="palette-export-workflow"
+          onClick={onExportWorkflow}
+        >
+          Export JSON
+        </button>
+        <button
+          type="button"
+          data-testid="palette-validate-workflow"
+          disabled={validating}
+          onClick={onValidateWorkflow}
+        >
+          {validating ? "Validating…" : "Validate with API"}
         </button>
       </div>
     </div>

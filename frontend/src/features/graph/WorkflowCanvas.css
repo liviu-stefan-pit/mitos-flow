@@ -97,6 +97,80 @@
   pointer-events: none;
 }
 
+.workflow-export-panel {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 25;
+  width: min(420px, calc(100% - 24px));
+  max-height: min(420px, calc(100% - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #c5c9d3;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  font-size: 0.78rem;
+}
+
+.workflow-export-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.workflow-export-header button {
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #c5c9d3;
+  background: #f8fafc;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.workflow-export-panel pre {
+  margin: 0;
+  overflow: auto;
+  max-height: 280px;
+  padding: 0.5rem;
+  border-radius: 6px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.workflow-validation-ok {
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.workflow-validation-ok p {
+  margin: 0;
+}
+
+.workflow-validation-error {
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.workflow-validation-error ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
 /* Reset React Flow wrapper chrome so only our custom node styles show */
 .workflow-canvas .react-flow__node {
   padding: 0;

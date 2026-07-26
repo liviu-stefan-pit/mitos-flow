@@ -54,11 +54,13 @@
   cursor: not-allowed;
 }
 
-.node-palette-draft-actions {
+.node-palette-draft-actions,
+.node-palette-api-actions {
   padding-top: 0.5rem;
   border-top: 1px solid #e5e7eb;
 }
 
-.node-palette-draft-actions button {
+.node-palette-draft-actions button,
+.node-palette-api-actions button {
   width: 100%;
 }

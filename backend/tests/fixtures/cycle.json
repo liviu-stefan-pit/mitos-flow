@@ -1,0 +1,40 @@
+{
+  "metadata": {
+    "name": "Cycle",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "skill-a",
+      "kind": "skill",
+      "label": "A",
+      "position": { "x": 0, "y": 0 },
+      "settings": { "description": "", "joinPolicy": "wait_for_all" }
+    },
+    {
+      "id": "skill-b",
+      "kind": "skill",
+      "label": "B",
+      "position": { "x": 200, "y": 0 },
+      "settings": { "description": "", "joinPolicy": "wait_for_all" }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-a",
+      "targetNodeId": "skill-b",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e2",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-b",
+      "targetNodeId": "skill-a",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    }
+  ]
+}

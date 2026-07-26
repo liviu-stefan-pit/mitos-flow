@@ -13,6 +13,11 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
+import type { WorkflowValidationResult } from "../../domain/workflow";
+import {
+  validateWorkflow,
+  WorkflowValidateError,
+} from "../workflow/validateApi";
 import { validateConnection } from "./connectionValidator";
 import {
   clearDraft,
@@ -26,6 +31,7 @@ import { NodePalette } from "./NodePalette";
 import { createNode } from "./nodeFactory";
 import { nodeTypes } from "./nodes";
 import { nodeKindFromFlowType, type NodeKind } from "./nodeKinds";
+import { uiGraphToDomainWorkflow } from "./toDomainWorkflow";
 import "./WorkflowCanvas.css";
 
 const FEEDBACK_MS = 4000;
@@ -37,7 +43,7 @@ const RESET_DRAFT_CONFIRM =
   "Reset the saved draft? The current canvas and browser draft will be cleared.";
 
 /**
- * Phase 7–8: node inspector + versioned local draft persistence.
+ * Phase 7–10: inspector, draft persistence, domain export + API validate.
  */
 function WorkflowCanvasInner() {
   const { screenToFlowPosition } = useReactFlow();
@@ -47,6 +53,10 @@ function WorkflowCanvasInner() {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [draftReady, setDraftReady] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [exportJson, setExportJson] = useState<string | null>(null);
+  const [validationResult, setValidationResult] =
+    useState<WorkflowValidationResult | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -161,6 +171,49 @@ function WorkflowCanvasInner() {
     clearCanvasAndDraft();
   }, [clearCanvasAndDraft]);
 
+  const handleExportWorkflow = useCallback(() => {
+    const mapped = uiGraphToDomainWorkflow(nodes, edges);
+    if (!mapped.ok) {
+      showFeedback(mapped.reason);
+      setExportJson(null);
+      return;
+    }
+    setExportJson(JSON.stringify(mapped.workflow, null, 2));
+    setValidationResult(null);
+  }, [nodes, edges, showFeedback]);
+
+  const handleValidateWorkflow = useCallback(async () => {
+    const mapped = uiGraphToDomainWorkflow(nodes, edges);
+    if (!mapped.ok) {
+      showFeedback(mapped.reason);
+      setValidationResult(null);
+      return;
+    }
+
+    setExportJson(JSON.stringify(mapped.workflow, null, 2));
+    setValidating(true);
+    try {
+      const result = await validateWorkflow(mapped.workflow);
+      setValidationResult(result);
+      if (result.valid) {
+        showFeedback("Workflow is valid.");
+      } else {
+        showFeedback(
+          result.errors[0]?.message ?? "Workflow validation failed.",
+        );
+      }
+    } catch (error) {
+      setValidationResult(null);
+      const message =
+        error instanceof WorkflowValidateError
+          ? error.message
+          : "Validation request failed.";
+      showFeedback(message);
+    } finally {
+      setValidating(false);
+    }
+  }, [nodes, edges, showFeedback]);
+
   const resolveConnection = useCallback(
     (connection: Connection) => {
       if (!connection.source || !connection.target) {
@@ -256,6 +309,11 @@ function WorkflowCanvasInner() {
         hasSelection={hasSelection}
         onNewWorkflow={handleNewWorkflow}
         onResetDraft={handleResetDraft}
+        onExportWorkflow={handleExportWorkflow}
+        onValidateWorkflow={() => {
+          void handleValidateWorkflow();
+        }}
+        validating={validating}
       />
       <NodeInspector node={selectedNode} onUpdateData={handleUpdateNodeData} />
       {feedback ? (
@@ -274,6 +332,50 @@ function WorkflowCanvasInner() {
           role="alert"
         >
           {warning}
+        </div>
+      ) : null}
+      {exportJson || validationResult ? (
+        <div
+          className="workflow-export-panel"
+          data-testid="workflow-export-panel"
+        >
+          <div className="workflow-export-header">
+            <span>Domain workflow</span>
+            <button
+              type="button"
+              data-testid="workflow-export-close"
+              onClick={() => {
+                setExportJson(null);
+                setValidationResult(null);
+              }}
+            >
+              Close
+            </button>
+          </div>
+          {validationResult ? (
+            <div
+              className={
+                validationResult.valid
+                  ? "workflow-validation-ok"
+                  : "workflow-validation-error"
+              }
+              data-testid="workflow-validation-result"
+              role="status"
+            >
+              {validationResult.valid ? (
+                <p>Valid — settings returned intact from API.</p>
+              ) : (
+                <ul>
+                  {validationResult.errors.map((error, index) => (
+                    <li key={`${error.code}-${index}`}>{error.message}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : null}
+          {exportJson ? (
+            <pre data-testid="workflow-export-json">{exportJson}</pre>
+          ) : null}
         </div>
       ) : null}
       <ReactFlow

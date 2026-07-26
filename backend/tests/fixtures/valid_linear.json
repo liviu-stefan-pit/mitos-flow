@@ -1,0 +1,89 @@
+{
+  "metadata": {
+    "name": "Linear sample",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "kind": "input",
+      "label": "Brief",
+      "position": { "x": 0, "y": 0 },
+      "settings": {
+        "mediaType": "text/plain",
+        "content": "Hello from input"
+      }
+    },
+    {
+      "id": "skill-1",
+      "kind": "skill",
+      "label": "Draft",
+      "position": { "x": 220, "y": 0 },
+      "settings": {
+        "description": "Draft the reply",
+        "joinPolicy": "wait_for_all"
+      }
+    },
+    {
+      "id": "kb-1",
+      "kind": "knowledgeBase",
+      "label": "Product docs",
+      "position": { "x": 220, "y": 140 },
+      "settings": {
+        "description": "KB for product facts"
+      }
+    },
+    {
+      "id": "rules-1",
+      "kind": "rules",
+      "label": "Tone rules",
+      "position": { "x": 40, "y": 140 },
+      "settings": {
+        "description": "Keep replies concise"
+      }
+    },
+    {
+      "id": "output-1",
+      "kind": "artifactOutput",
+      "label": "Save reply",
+      "position": { "x": 440, "y": 0 },
+      "settings": {
+        "mode": "pass-through"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-data-1",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-1",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e-data-2",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-1",
+      "targetNodeId": "output-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e-res-1",
+      "kind": "resourceAttachment",
+      "sourceNodeId": "kb-1",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "resource-out",
+      "targetPortId": "resource-in"
+    },
+    {
+      "id": "e-res-2",
+      "kind": "resourceAttachment",
+      "sourceNodeId": "rules-1",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "resource-out",
+      "targetPortId": "resource-in"
+    }
+  ]
+}
