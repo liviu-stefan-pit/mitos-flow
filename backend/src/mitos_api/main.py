@@ -3,7 +3,14 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from mitos_api.domain import Workflow, WorkflowValidationResult, validate_workflow
+from mitos_api.domain import (
+    RunRequest,
+    RunResponse,
+    Workflow,
+    WorkflowValidationResult,
+    validate_workflow,
+)
+from mitos_api.services import execute_run
 
 app = FastAPI(title="Mitos Flow API", version="0.1.0")
 
@@ -29,3 +36,9 @@ def health():
 def validate_workflow_endpoint(workflow: Workflow) -> WorkflowValidationResult:
     """Validate a workflow document. Does not save or execute."""
     return validate_workflow(workflow)
+
+
+@app.post("/api/runs", response_model=RunResponse)
+def create_run(request: RunRequest) -> RunResponse:
+    """Execute a supported workflow synchronously (fake runner, Phase 11)."""
+    return execute_run(request.workflow)

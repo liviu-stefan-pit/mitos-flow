@@ -3,7 +3,7 @@
 > Running log of completed work. Update after each phase.
 
 **Last updated:** 2026-07-26  
-**Current phase:** 11 (next)
+**Current phase:** 12 (next)
 
 ---
 
@@ -22,6 +22,7 @@
 | 8 | 2026-07-26 | Local draft persistence |
 | 9 | 2026-07-26 | Backend workflow schema + validate endpoint |
 | 10 | 2026-07-26 | Frontend/backend schema round-trip |
+| 11 | 2026-07-26 | Fake runner for one Skill + POST /api/runs |
 
 ---
 
@@ -155,6 +156,22 @@
 - Tests: mapper settings preservation, mocked API round-trip, canvas export/validate; frontend suite 47 passing
 - `tsc -b --noEmit` passes
 
+### Phase 11 — Fake runner for one Skill
+
+**Status:** Complete  
+**Date:** 2026-07-26
+
+- Runner interface (`SkillExecutionRequest` / `SkillExecutionResult` / `Runner` Protocol) under `backend/src/mitos_api/services/runners/`
+- Deterministic `FakeRunner`: output format `fake::{skillLabel}::{inputPayload}`
+- Synchronous orchestration in `services/runs.py` for exactly Input → Skill → Artifact Output (pass-through)
+- Optional KB/Rules nodes are marked `skipped` (not executed yet)
+- `POST /api/runs` accepts `{ workflow }` and returns `{ id, status, nodeResults, errors, output, mediaType }`
+- Unsupported graphs rejected with `status: "rejected"` + `unsupported_graph` (multi-skill chains, non-pass-through outputs, wrong edge counts)
+- Invalid workflows rejected via existing validator (e.g. cycles)
+- Fixtures: `simple_linear`, `unsupported_two_skills`, `unsupported_selector_output`
+- Backend tests: 20 passing (8 new in `test_runs.py`)
+- **Manual check:** `POST /api/runs` with simple linear flow → `output: "fake::Draft::Hello from input"`
+
 ---
 
 ## Known issues
@@ -165,4 +182,4 @@ _None._
 
 ## Next up
 
-- Phase 11: Fake runner for one Skill
+- Phase 12: DAG scheduler for linear chains

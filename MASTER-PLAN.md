@@ -3,7 +3,7 @@
 > **Purpose of this document:** Single source of truth for what Mitos Flow is, how it should be built, and which phase is done. Update checkboxes as phases complete. Point every implementation chat at this file first.
 
 **Last updated:** 2026-07-26  
-**Current phase:** 11 (next)  
+**Current phase:** 12 (next)  
 **Stack:** Local React/Vite frontend + FastAPI backend · Cursor CLI first · Fake runner before real CLI
 
 ---
@@ -204,7 +204,7 @@ Rules:
 
 ### Deterministic execution first
 
-- [ ] **Phase 11 — Fake runner for one Skill**
+- [x] **Phase 11 — Fake runner for one Skill**
   - Runner interface + deterministic fake implementation
   - Execute Input → Skill → Output via `POST /api/runs` (synchronous)
   - **Gate:** Integration test proves exact I/O and node states; unsupported graphs rejected
@@ -425,7 +425,7 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 8 | 2026-07-26 | Versioned localStorage draft; New Workflow / Reset Draft |
 | 9 | 2026-07-26 | Pydantic workflow schema + POST /api/workflows/validate |
 | 10 | 2026-07-26 | TS domain types, UI→domain mapper, export/validate in UI |
-| 11 | | |
+| 11 | 2026-07-26 | Fake runner + POST /api/runs for Input→Skill→Output |
 | 12 | | |
 | 13 | | |
 | 14 | | |

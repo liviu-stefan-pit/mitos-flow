@@ -1,0 +1,55 @@
+{
+  "metadata": {
+    "name": "Selector output unsupported",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "kind": "input",
+      "label": "Brief",
+      "position": { "x": 0, "y": 0 },
+      "settings": {
+        "mediaType": "text/plain",
+        "content": "Hello"
+      }
+    },
+    {
+      "id": "skill-1",
+      "kind": "skill",
+      "label": "Draft",
+      "position": { "x": 220, "y": 0 },
+      "settings": {
+        "description": "Draft",
+        "joinPolicy": "wait_for_all"
+      }
+    },
+    {
+      "id": "output-1",
+      "kind": "artifactOutput",
+      "label": "Extract",
+      "position": { "x": 440, "y": 0 },
+      "settings": {
+        "mode": "selector"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-1",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e2",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-1",
+      "targetNodeId": "output-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    }
+  ]
+}
