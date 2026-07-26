@@ -69,12 +69,11 @@ describe("App", () => {
     });
   });
 
-  it("renders the sample workflow canvas", () => {
+  it("renders the workflow canvas with an empty state and node palette", () => {
     mockedCheck.mockResolvedValue(false);
     render(<App />);
     expect(screen.getByTestId("workflow-canvas")).toBeInTheDocument();
-    expect(screen.getByTestId("node-input")).toBeInTheDocument();
-    expect(screen.getByTestId("node-skill")).toBeInTheDocument();
-    expect(screen.getByTestId("node-output")).toBeInTheDocument();
+    expect(screen.getByTestId("node-palette")).toBeInTheDocument();
+    expect(screen.queryByTestId("node-input")).not.toBeInTheDocument();
   });
 });

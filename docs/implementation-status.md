@@ -3,7 +3,7 @@
 > Running log of completed work. Update after each phase.
 
 **Last updated:** 2026-07-26  
-**Current phase:** 5 (next)
+**Current phase:** 6 (next)
 
 ---
 
@@ -16,6 +16,7 @@
 | 2 | 2026-07-26 | Frontend shell |
 | 3 | 2026-07-26 | Unified local development command |
 | 4 | 2026-07-26 | Read-only sample canvas |
+| 5 | 2026-07-26 | Add, select, move, and delete nodes |
 
 ---
 
@@ -75,6 +76,20 @@
 - `WorkflowCanvas` is read-only (`nodesDraggable={false}`, `nodesConnectable={false}`, `elementsSelectable={false}`); pan/zoom enabled
 - Tests: `WorkflowCanvas.test.tsx` (2) + updated `App.test.tsx` — 6 frontend tests passing
 
+### Phase 5 — Add, select, move, and delete nodes
+
+**Status:** Complete  
+**Date:** 2026-07-26
+
+- Removed the fixed Phase 4 sample graph (`sampleGraph.ts`); canvas now starts empty on every load — no persistence yet (Phase 8)
+- Added `NodePalette` (`frontend/src/features/graph/NodePalette.tsx`) with one "add" button per node kind: Input, Skill, Knowledge Base, Rules, Artifact Output
+- Added `KnowledgeBaseNode` and `RulesNode` custom renderers (all 5 kinds from `docs/architecture.md` now exist under `frontend/src/features/graph/nodes/`)
+- Added `nodeKinds.ts` (palette config: kind, React Flow type, ID prefix, display name) and `nodeFactory.ts` (creates a node with a unique ID and staggered position)
+- `WorkflowCanvas` now uses `useNodesState`/`useEdgesState`; nodes are draggable, selectable, and deletable via a "Delete selected" button or the Backspace/Delete key
+- Node settings remain fixed (no inspector yet — that's Phase 7); edges/connections remain disabled (`nodesConnectable={false}` — that's Phase 6)
+- Tests: `WorkflowCanvas.test.tsx` (5 tests: empty start, palette presence, add each kind, delete selected, draggable/selectable classes) + updated `App.test.tsx` — 9 frontend tests passing
+- `tsc -b --noEmit` passes
+
 ---
 
 ## Known issues
@@ -85,4 +100,4 @@ _None._
 
 ## Next up
 
-- Phase 5: Add, select, move, and delete nodes
+- Phase 6: Typed edges and connection rules

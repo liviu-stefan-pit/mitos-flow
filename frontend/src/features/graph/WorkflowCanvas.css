@@ -41,6 +41,14 @@
   border-left: 3px solid #10b981;
 }
 
+.graph-node-kb {
+  border-left: 3px solid #f59e0b;
+}
+
+.graph-node-rules {
+  border-left: 3px solid #ef4444;
+}
+
 .graph-node .react-flow__handle {
   width: 8px;
   height: 8px;
@@ -60,9 +68,11 @@
   font-size: inherit;
 }
 
-.workflow-canvas .react-flow__node.selected,
 .workflow-canvas .react-flow__node:focus,
 .workflow-canvas .react-flow__node:focus-visible {
   outline: none !important;
-  box-shadow: none !important;
+}
+
+.workflow-canvas .react-flow__node.selected .graph-node {
+  box-shadow: 0 0 0 2px #8b5cf6;
 }

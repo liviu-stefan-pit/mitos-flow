@@ -3,7 +3,7 @@
 > **Purpose of this document:** Single source of truth for what Mitos Flow is, how it should be built, and which phase is done. Update checkboxes as phases complete. Point every implementation chat at this file first.
 
 **Last updated:** 2026-07-26  
-**Current phase:** 5 (next)  
+**Current phase:** 6 (next)  
 **Stack:** Local React/Vite frontend + FastAPI backend · Cursor CLI first · Fake runner before real CLI
 
 ---
@@ -161,7 +161,7 @@ Rules:
   - **Gate:** Graph renders, pans, zooms; no editing controls
   - **Manual check:** Sample graph visible and interactive (pan/zoom only)
 
-- [ ] **Phase 5 — Add, select, move, and delete nodes**
+- [x] **Phase 5 — Add, select, move, and delete nodes**
   - Node palette for all five node kinds
   - Selection, movement, deletion only; settings remain fixed
   - **Gate:** UI tests for add/delete; refresh confirms state not persisted yet
@@ -419,7 +419,7 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 2 | 2026-07-26 | Vite/React shell with backend connection status |
 | 3 | 2026-07-26 | npm run dev starts both services, CORS configured |
 | 4 | 2026-07-26 | Read-only @xyflow sample: Input → Skill → Artifact Output |
-| 5 | | |
+| 5 | 2026-07-26 | Node palette (5 kinds); add/select/move/delete; canvas starts empty each load |
 | 6 | | |
 | 7 | | |
 | 8 | | |
