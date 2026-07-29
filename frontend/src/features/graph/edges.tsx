@@ -4,7 +4,7 @@ import {
   type EdgeProps,
 } from "@xyflow/react";
 
-/** Solid data-flow edge. */
+/** Solid data-flow edge; animates when ``data.active`` is true. */
 export function DataFlowEdge({
   id,
   sourceX,
@@ -15,6 +15,7 @@ export function DataFlowEdge({
   targetPosition,
   style,
   markerEnd,
+  data,
 }: EdgeProps) {
   const [edgePath] = getSmoothStepPath({
     sourceX,
@@ -25,14 +26,19 @@ export function DataFlowEdge({
     targetPosition,
   });
 
+  const active = Boolean(
+    data && typeof data === "object" && "active" in data && data.active,
+  );
+
   return (
     <BaseEdge
       id={id}
       path={edgePath}
       markerEnd={markerEnd}
+      className={active ? "data-flow-edge-active" : undefined}
       style={{
-        stroke: "#64748b",
-        strokeWidth: 2,
+        stroke: active ? "#2563eb" : "#64748b",
+        strokeWidth: active ? 2.5 : 2,
         ...style,
       }}
     />

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 from mitos_api.services.runners.base import SkillExecutionRequest, SkillExecutionResult
 
 
@@ -17,7 +19,14 @@ class FakeRunner:
       fake::{skillLabel}::{portA}={payloadA}|{portB}={payloadB}
     """
 
+    def __init__(self, *, execute_delay_ms: int = 0) -> None:
+        self.execute_delay_ms = execute_delay_ms
+        self.cleaned_up: list[str] = []
+
     def execute(self, request: SkillExecutionRequest) -> SkillExecutionResult:
+        if self.execute_delay_ms > 0:
+            time.sleep(self.execute_delay_ms / 1000.0)
+
         if len(request.inputs) > 1:
             parts = "|".join(
                 f"{envelope.port}={envelope.payload}"
@@ -39,3 +48,7 @@ class FakeRunner:
 
         output = f"fake::{request.skillLabel}::{payload}"
         return SkillExecutionResult(outputPayload=output, mediaType=media_type)
+
+    def cleanup(self, skill_node_id: str) -> None:
+        """Record cleanup for tests (Phase 16 cleanup hooks)."""
+        self.cleaned_up.append(skill_node_id)

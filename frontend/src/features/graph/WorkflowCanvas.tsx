@@ -14,6 +14,8 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import type { WorkflowValidationResult } from "../../domain/workflow";
+import { ActivityTimeline } from "../run/ActivityTimeline";
+import { useWorkflowRun } from "../run/useWorkflowRun";
 import {
   validateWorkflow,
   WorkflowValidateError,
@@ -43,7 +45,7 @@ const RESET_DRAFT_CONFIRM =
   "Reset the saved draft? The current canvas and browser draft will be cleared.";
 
 /**
- * Phase 7–10: inspector, draft persistence, domain export + API validate.
+ * Phase 7–16: inspector, draft, validate, live runs, cancel.
  */
 function WorkflowCanvasInner() {
   const { screenToFlowPosition } = useReactFlow();
@@ -59,6 +61,7 @@ function WorkflowCanvasInner() {
     useState<WorkflowValidationResult | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const workflowRun = useWorkflowRun();
 
   const showFeedback = useCallback((message: string) => {
     setFeedback(message);
@@ -214,6 +217,57 @@ function WorkflowCanvasInner() {
     }
   }, [nodes, edges, showFeedback]);
 
+  const handleRunWorkflow = useCallback(async () => {
+    const mapped = uiGraphToDomainWorkflow(nodes, edges);
+    if (!mapped.ok) {
+      showFeedback(mapped.reason);
+      return;
+    }
+    try {
+      const created = await workflowRun.start(mapped.workflow);
+      if (created.status === "rejected") {
+        showFeedback(
+          created.errors[0]?.message ?? "Workflow rejected for execution.",
+        );
+        return;
+      }
+      showFeedback("Run started — watch live progress on the canvas.");
+    } catch {
+      showFeedback("Failed to start run.");
+    }
+  }, [nodes, edges, showFeedback, workflowRun]);
+
+  const handleCancelRun = useCallback(async () => {
+    await workflowRun.cancel();
+    showFeedback("Cancel requested — waiting for run to stop.");
+  }, [showFeedback, workflowRun]);
+
+  const displayNodes = useMemo(
+    () =>
+      nodes.map((node) => {
+        const runState = workflowRun.nodeStates[node.id];
+        const className = runState ? `run-state-${runState}` : undefined;
+        return className ? { ...node, className } : { ...node, className: undefined };
+      }),
+    [nodes, workflowRun.nodeStates],
+  );
+
+  const displayEdges = useMemo(
+    () =>
+      edges.map((edge) => {
+        if (edge.type !== "dataFlow") {
+          return { ...edge, data: { ...(edge.data ?? {}), active: false } };
+        }
+        const active = workflowRun.activeEdgeNodeIds.has(edge.target);
+        return {
+          ...edge,
+          data: { ...(edge.data ?? {}), active },
+          className: active ? "data-flow-edge-active" : undefined,
+        };
+      }),
+    [edges, workflowRun.activeEdgeNodeIds],
+  );
+
   const resolveConnection = useCallback(
     (connection: Connection) => {
       if (!connection.source || !connection.target) {
@@ -314,8 +368,21 @@ function WorkflowCanvasInner() {
           void handleValidateWorkflow();
         }}
         validating={validating}
+        onRunWorkflow={() => {
+          void handleRunWorkflow();
+        }}
+        onCancelRun={() => {
+          void handleCancelRun();
+        }}
+        running={workflowRun.isLive}
+        canRun={nodes.length > 0 && !workflowRun.isLive}
       />
       <NodeInspector node={selectedNode} onUpdateData={handleUpdateNodeData} />
+      <ActivityTimeline
+        events={workflowRun.events}
+        selectedNodeId={selectedNode?.id ?? null}
+        runStatus={workflowRun.status}
+      />
       {feedback ? (
         <div
           className="connection-feedback"
@@ -332,6 +399,16 @@ function WorkflowCanvasInner() {
           role="alert"
         >
           {warning}
+        </div>
+      ) : null}
+      {workflowRun.status === "cancelled" ? (
+        <div
+          className="run-stopped-banner"
+          data-testid="run-stopped-banner"
+          role="status"
+        >
+          Run stopped. Downstream nodes did not start.
+          {workflowRun.errorMessage ? ` ${workflowRun.errorMessage}` : ""}
         </div>
       ) : null}
       {exportJson || validationResult ? (
@@ -379,8 +456,8 @@ function WorkflowCanvasInner() {
         </div>
       ) : null}
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={displayNodes}
+        edges={displayEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}

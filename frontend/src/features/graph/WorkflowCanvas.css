@@ -191,3 +191,70 @@
 .workflow-canvas .react-flow__node.selected .graph-node {
   box-shadow: 0 0 0 2px #8b5cf6;
 }
+
+/* Phase 15 — live run edge animation */
+.react-flow__edge-path.data-flow-edge-active,
+.data-flow-edge-active {
+  stroke-dasharray: 8 6;
+  animation: mitos-edge-flow 0.6s linear infinite;
+}
+
+@keyframes mitos-edge-flow {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+
+/* Phase 15–16 — per-node run state */
+.graph-node.run-state-queued {
+  box-shadow: 0 0 0 2px #93c5fd;
+}
+
+.graph-node.run-state-running {
+  box-shadow: 0 0 0 2px #2563eb;
+  animation: mitos-node-pulse 1s ease-in-out infinite;
+}
+
+.graph-node.run-state-completed {
+  box-shadow: 0 0 0 2px #34d399;
+}
+
+.graph-node.run-state-failed,
+.graph-node.run-state-blocked,
+.graph-node.run-state-timeout {
+  box-shadow: 0 0 0 2px #f87171;
+}
+
+.graph-node.run-state-cancelled {
+  box-shadow: 0 0 0 2px #fb923c;
+  opacity: 0.85;
+}
+
+.graph-node.run-state-skipped {
+  opacity: 0.55;
+}
+
+@keyframes mitos-node-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px #2563eb;
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.35);
+  }
+}
+
+.run-stopped-banner {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 20;
+  max-width: min(360px, calc(100% - 24px));
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid #fdba74;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 0.8rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}

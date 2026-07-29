@@ -64,3 +64,24 @@
 .node-palette-api-actions button {
   width: 100%;
 }
+
+.node-palette-run-actions {
+  padding-top: 0.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.node-palette-run-actions button {
+  width: 100%;
+}
+
+.node-palette-run-actions button[data-testid="palette-run-workflow"]:not(:disabled) {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.node-palette-run-actions button[data-testid="palette-cancel-run"]:not(:disabled) {
+  background: #fff7ed;
+  border-color: #fdba74;
+  color: #c2410c;
+}

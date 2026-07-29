@@ -1,8 +1,13 @@
 """Shared workflow domain models and validation (Phase 9+)."""
 
 from mitos_api.domain.run import (
+    CancelRunResponse,
     NodeRunResult,
     NodeRunState,
+    RunEvent,
+    RunEventScope,
+    RunEventType,
+    RunOptions,
     RunRequest,
     RunResponse,
 )
@@ -34,6 +39,7 @@ from mitos_api.domain.workflow import (
 __all__ = [
     "ArtifactOutputMode",
     "ArtifactOutputNodeSettings",
+    "CancelRunResponse",
     "EdgeKind",
     "InputEnvelope",
     "InputNodeSettings",
@@ -47,6 +53,10 @@ __all__ = [
     "PortKind",
     "Position",
     "RulesNodeSettings",
+    "RunEvent",
+    "RunEventScope",
+    "RunEventType",
+    "RunOptions",
     "RunRequest",
     "RunResponse",
     "SkillNodeSettings",

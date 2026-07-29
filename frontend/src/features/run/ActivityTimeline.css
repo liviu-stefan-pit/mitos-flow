@@ -1,0 +1,125 @@
+.activity-timeline {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 10;
+  width: min(360px, calc(100% - 24px));
+  max-height: min(280px, 40vh);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #c5c9d3;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  font-size: 0.75rem;
+}
+
+.activity-timeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  font-size: 0.7rem;
+}
+
+.activity-timeline-status {
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #374151;
+  font-weight: 500;
+}
+
+.activity-timeline-status.status-running,
+.activity-timeline-status.status-queued {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.activity-timeline-status.status-completed {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.activity-timeline-status.status-failed,
+.activity-timeline-status.status-rejected {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.activity-timeline-status.status-cancelled {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.activity-timeline-filter,
+.activity-timeline-empty {
+  margin: 0;
+  color: #6b7280;
+}
+
+.activity-timeline-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.activity-event {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+.activity-event.type-running {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.activity-event.type-completed {
+  border-color: #6ee7b7;
+  background: #ecfdf5;
+}
+
+.activity-event.type-failed,
+.activity-event.type-blocked,
+.activity-event.type-timeout {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.activity-event.type-cancelled {
+  border-color: #fdba74;
+  background: #fff7ed;
+}
+
+.activity-event-type {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.activity-event-node,
+.activity-event-message,
+.activity-event-output {
+  color: #4b5563;
+  word-break: break-word;
+}
+
+.activity-event-error {
+  color: #b91c1c;
+  word-break: break-word;
+}

@@ -37,3 +37,7 @@ class Runner(Protocol):
     def execute(self, request: SkillExecutionRequest) -> SkillExecutionResult:
         """Run the skill and return its output payload."""
         ...
+
+    def cleanup(self, skill_node_id: str) -> None:
+        """Release resources after a Skill finishes, fails, times out, or is cancelled."""
+        ...

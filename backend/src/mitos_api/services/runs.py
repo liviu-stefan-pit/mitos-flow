@@ -1,12 +1,21 @@
-"""Synchronous run orchestration with named-input joins (Phase 14)."""
+"""Run orchestration with live events, cancel, and timeouts (Phases 11–16)."""
 
 from __future__ import annotations
 
+import threading
+import time
 import uuid
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeout
+from typing import Any
 
 from mitos_api.domain.run import (
     NodeRunResult,
     NodeRunState,
+    RunEventScope,
+    RunEventType,
+    RunOptions,
     RunResponse,
 )
 from mitos_api.domain.validation import validate_workflow
@@ -16,32 +25,105 @@ from mitos_api.domain.workflow import (
     ValidationIssue,
     Workflow,
 )
+from mitos_api.services.run_store import RunStore, run_store
 from mitos_api.services.runners.base import Runner, SkillExecutionRequest
 from mitos_api.services.runners.fake import FakeRunner
 from mitos_api.services.scheduler import collect_input_envelopes, plan_linear_chain
+
+EventCallback = Callable[..., Any]
+CancelCheck = Callable[[], bool]
+
+
+class RunCancelled(Exception):
+    """Raised when a run is cancelled before a node starts."""
+
+
+def _interruptible_sleep(delay_ms: int, is_cancelled: CancelCheck) -> None:
+    if delay_ms <= 0:
+        return
+    deadline = time.monotonic() + (delay_ms / 1000.0)
+    while time.monotonic() < deadline:
+        if is_cancelled():
+            raise RunCancelled()
+        remaining = deadline - time.monotonic()
+        time.sleep(min(0.05, max(remaining, 0.0)))
+
+
+def _call_cleanup(runner: Runner, skill_node_id: str) -> None:
+    cleanup = getattr(runner, "cleanup", None)
+    if callable(cleanup):
+        cleanup(skill_node_id)
+
+
+def _execute_skill_with_timeout(
+    runner: Runner,
+    request: SkillExecutionRequest,
+    *,
+    timeout_ms: int | None,
+) -> Any:
+    if timeout_ms is None:
+        return runner.execute(request)
+
+    timeout_sec = timeout_ms / 1000.0
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(runner.execute, request)
+        try:
+            return future.result(timeout=timeout_sec)
+        except FuturesTimeout as exc:
+            future.cancel()
+            raise TimeoutError(
+                f"Skill '{request.skillNodeId}' exceeded timeout of {timeout_ms}ms"
+            ) from exc
 
 
 def execute_run(
     workflow: Workflow,
     *,
     runner: Runner | None = None,
+    options: RunOptions | None = None,
+    on_event: EventCallback | None = None,
+    is_cancelled: CancelCheck | None = None,
+    run_id: str | None = None,
 ) -> RunResponse:
     """
-    Execute a Phase-14-supported graph synchronously.
+    Execute a Phase-14-supported graph, optionally emitting live events.
 
     Supported shape: one or more Inputs → Skills (linear path and/or
     wait_for_all joins on named ports) → one or more pass-through Artifact
     Outputs. Skills run in topological order; each Skill waits for every
-    declared data-in port. Failure or blocked join stops the chain.
-    Optional Knowledge Base / Rules nodes are skipped.
+    declared data-in port. Failure, timeout, blocked join, or cancel stops
+    the chain so no downstream node starts.
     """
-    run_id = str(uuid.uuid4())
+    rid = run_id or str(uuid.uuid4())
     active_runner: Runner = runner if runner is not None else FakeRunner()
+    opts = options or RunOptions()
+    cancel_check: CancelCheck = is_cancelled or (lambda: False)
+
+    def emit(
+        event_type: RunEventType,
+        *,
+        scope: RunEventScope = RunEventScope.NODE,
+        node_id: str | None = None,
+        message: str | None = None,
+        output: str | None = None,
+        media_type: str | None = None,
+        error: str | None = None,
+    ) -> None:
+        if on_event is not None:
+            on_event(
+                event_type,
+                scope=scope,
+                node_id=node_id,
+                message=message,
+                output=output,
+                media_type=media_type,
+                error=error,
+            )
 
     validation = validate_workflow(workflow)
     if not validation.valid:
         return RunResponse(
-            id=run_id,
+            id=rid,
             status="rejected",
             errors=list(validation.errors),
         )
@@ -49,17 +131,29 @@ def execute_run(
     plan, shape_errors = plan_linear_chain(workflow)
     if shape_errors or plan is None:
         return RunResponse(
-            id=run_id,
+            id=rid,
             status="rejected",
             errors=shape_errors,
         )
+
+    emit(
+        RunEventType.QUEUED,
+        scope=RunEventScope.RUN,
+        message="Run queued",
+    )
+    emit(
+        RunEventType.RUNNING,
+        scope=RunEventScope.RUN,
+        message="Run started",
+    )
 
     node_results: list[NodeRunResult] = []
     completed_outputs: dict[str, tuple[str, str]] = {}
     arrival_order: dict[str, int] = {}
     arrival_counter = 0
+    failed_upstream: str | None = None
 
-    # Optional resource nodes are present but not executed in Phase 14.
+    # Optional resource nodes are present but not executed yet.
     for node in workflow.nodes:
         if node.kind in (NodeKind.KNOWLEDGE_BASE, NodeKind.RULES):
             node_results.append(
@@ -68,10 +162,160 @@ def execute_run(
                     state=NodeRunState.SKIPPED,
                 )
             )
+            emit(
+                RunEventType.SKIPPED,
+                node_id=node.id,
+                message="Resource node skipped in this phase",
+            )
+
+    def mark_cancelled_remaining(
+        remaining_skills: list,
+        *,
+        reason: str,
+    ) -> RunResponse:
+        for skipped in remaining_skills:
+            node_results.append(
+                NodeRunResult(
+                    nodeId=skipped.id,
+                    state=NodeRunState.CANCELLED,
+                    error=reason,
+                )
+            )
+            emit(
+                RunEventType.CANCELLED,
+                node_id=skipped.id,
+                message=reason,
+                error=reason,
+            )
+        for output_node in plan.output_nodes:
+            # Skip outputs that were never reached; report branch failure.
+            already = {r.nodeId for r in node_results}
+            if output_node.id in already:
+                continue
+            msg = f"Branch stopped: {reason}"
+            node_results.append(
+                NodeRunResult(
+                    nodeId=output_node.id,
+                    state=NodeRunState.CANCELLED,
+                    error=msg,
+                )
+            )
+            emit(
+                RunEventType.CANCELLED,
+                node_id=output_node.id,
+                message=msg,
+                error=msg,
+            )
+        emit(
+            RunEventType.CANCELLED,
+            scope=RunEventScope.RUN,
+            message=reason,
+            error=reason,
+        )
+        return RunResponse(
+            id=rid,
+            status="cancelled",
+            nodeResults=node_results,
+            errors=[
+                ValidationIssue(
+                    code="cancelled",
+                    message=reason,
+                )
+            ],
+        )
+
+    def mark_failed_remaining(
+        remaining_skills: list,
+        *,
+        failed_node_id: str,
+        issue: ValidationIssue,
+        skill_state: NodeRunState = NodeRunState.FAILED,
+        event_type: RunEventType = RunEventType.FAILED,
+    ) -> RunResponse:
+        nonlocal failed_upstream
+        failed_upstream = failed_node_id
+        for skipped in remaining_skills:
+            reason = f"Skipped due to upstream failure on '{failed_node_id}'"
+            node_results.append(
+                NodeRunResult(
+                    nodeId=skipped.id,
+                    state=NodeRunState.SKIPPED,
+                    error=reason,
+                )
+            )
+            emit(
+                RunEventType.SKIPPED,
+                node_id=skipped.id,
+                message=reason,
+                error=reason,
+            )
+        for output_node in plan.output_nodes:
+            already = {r.nodeId for r in node_results}
+            if output_node.id in already:
+                continue
+            reason = (
+                f"Branch failed: upstream '{failed_node_id}' did not complete"
+            )
+            node_results.append(
+                NodeRunResult(
+                    nodeId=output_node.id,
+                    state=NodeRunState.SKIPPED,
+                    error=reason,
+                )
+            )
+            emit(
+                RunEventType.SKIPPED,
+                node_id=output_node.id,
+                message=reason,
+                error=reason,
+            )
+        emit(
+            event_type if event_type is RunEventType.FAILED else RunEventType.FAILED,
+            scope=RunEventScope.RUN,
+            message=issue.message,
+            error=issue.message,
+        )
+        return RunResponse(
+            id=rid,
+            status="failed",
+            nodeResults=node_results,
+            errors=[issue],
+        )
 
     # Complete Inputs first (deterministic id order from the plan).
     for input_node in plan.input_nodes:
+        if cancel_check():
+            return mark_cancelled_remaining(
+                list(plan.skill_nodes),
+                reason="Run cancelled before inputs completed",
+            )
         assert isinstance(input_node.settings, InputNodeSettings)
+        emit(RunEventType.QUEUED, node_id=input_node.id)
+        emit(RunEventType.RUNNING, node_id=input_node.id)
+        try:
+            _interruptible_sleep(opts.delayMs, cancel_check)
+        except RunCancelled:
+            node_results.append(
+                NodeRunResult(
+                    nodeId=input_node.id,
+                    state=NodeRunState.CANCELLED,
+                    error="Cancelled during input delay",
+                )
+            )
+            emit(
+                RunEventType.CANCELLED,
+                node_id=input_node.id,
+                message="Cancelled during input delay",
+                error="Cancelled during input delay",
+            )
+            remaining = [
+                s for s in plan.skill_nodes if s.id not in {r.nodeId for r in node_results}
+            ]
+            return mark_cancelled_remaining(
+                remaining,
+                reason="Run cancelled during input processing",
+            )
+
         payload = input_node.settings.content
         media_type = input_node.settings.mediaType
         node_results.append(
@@ -85,10 +329,23 @@ def execute_run(
         completed_outputs[input_node.id] = (payload, media_type)
         arrival_order[input_node.id] = arrival_counter
         arrival_counter += 1
+        emit(
+            RunEventType.COMPLETED,
+            node_id=input_node.id,
+            output=payload,
+            media_type=media_type,
+        )
 
     remaining_skills = list(plan.skill_nodes)
     while remaining_skills:
+        if cancel_check():
+            return mark_cancelled_remaining(
+                remaining_skills,
+                reason="Run cancelled before next Skill started",
+            )
+
         skill_node = remaining_skills.pop(0)
+        emit(RunEventType.QUEUED, node_id=skill_node.id)
 
         envelopes, blocked = collect_input_envelopes(
             skill_node,
@@ -104,38 +361,53 @@ def execute_run(
                     error=blocked.message if blocked else "blocked",
                 )
             )
-            for skipped in remaining_skills:
-                node_results.append(
-                    NodeRunResult(
-                        nodeId=skipped.id,
-                        state=NodeRunState.SKIPPED,
-                    )
+            emit(
+                RunEventType.BLOCKED,
+                node_id=skill_node.id,
+                message=blocked.message if blocked else "blocked",
+                error=blocked.message if blocked else "blocked",
+            )
+            return mark_failed_remaining(
+                remaining_skills,
+                failed_node_id=skill_node.id,
+                issue=blocked
+                if blocked is not None
+                else ValidationIssue(
+                    code="blocked",
+                    message="Skill blocked on missing inputs.",
+                    nodeId=skill_node.id,
+                ),
+                skill_state=NodeRunState.BLOCKED,
+                event_type=RunEventType.BLOCKED,
+            )
+
+        emit(RunEventType.RUNNING, node_id=skill_node.id)
+        try:
+            _interruptible_sleep(opts.delayMs, cancel_check)
+        except RunCancelled:
+            node_results.append(
+                NodeRunResult(
+                    nodeId=skill_node.id,
+                    state=NodeRunState.CANCELLED,
+                    error="Cancelled before Skill execution",
                 )
-            for output_node in plan.output_nodes:
-                node_results.append(
-                    NodeRunResult(
-                        nodeId=output_node.id,
-                        state=NodeRunState.SKIPPED,
-                    )
-                )
-            return RunResponse(
-                id=run_id,
-                status="failed",
-                nodeResults=node_results,
-                errors=[
-                    blocked
-                    if blocked is not None
-                    else ValidationIssue(
-                        code="blocked",
-                        message="Skill blocked on missing inputs.",
-                        nodeId=skill_node.id,
-                    )
-                ],
+            )
+            emit(
+                RunEventType.CANCELLED,
+                node_id=skill_node.id,
+                message="Cancelled before Skill execution",
+                error="Cancelled before Skill execution",
+            )
+            _call_cleanup(active_runner, skill_node.id)
+            return mark_cancelled_remaining(
+                remaining_skills,
+                reason="Run cancelled before Skill execution",
             )
 
         primary = envelopes[0]
         try:
-            skill_result = active_runner.execute(
+            skill_result = _execute_skill_with_timeout(
+                active_runner,
                 SkillExecutionRequest(
                     skillNodeId=skill_node.id,
                     skillLabel=skill_node.label,
@@ -143,7 +415,35 @@ def execute_run(
                     inputPayload=primary.payload,
                     inputMediaType=primary.mediaType,
                     inputs=envelopes,
+                ),
+                timeout_ms=opts.nodeTimeoutMs,
+            )
+        except TimeoutError as exc:
+            msg = str(exc)
+            node_results.append(
+                NodeRunResult(
+                    nodeId=skill_node.id,
+                    state=NodeRunState.TIMEOUT,
+                    error=msg,
                 )
+            )
+            emit(
+                RunEventType.TIMEOUT,
+                node_id=skill_node.id,
+                message=msg,
+                error=msg,
+            )
+            _call_cleanup(active_runner, skill_node.id)
+            return mark_failed_remaining(
+                remaining_skills,
+                failed_node_id=skill_node.id,
+                issue=ValidationIssue(
+                    code="timeout",
+                    message=msg,
+                    nodeId=skill_node.id,
+                ),
+                skill_state=NodeRunState.TIMEOUT,
+                event_type=RunEventType.TIMEOUT,
             )
         except Exception as exc:
             node_results.append(
@@ -153,32 +453,24 @@ def execute_run(
                     error=str(exc),
                 )
             )
-            for skipped in remaining_skills:
-                node_results.append(
-                    NodeRunResult(
-                        nodeId=skipped.id,
-                        state=NodeRunState.SKIPPED,
-                    )
-                )
-            for output_node in plan.output_nodes:
-                node_results.append(
-                    NodeRunResult(
-                        nodeId=output_node.id,
-                        state=NodeRunState.SKIPPED,
-                    )
-                )
-            return RunResponse(
-                id=run_id,
-                status="failed",
-                nodeResults=node_results,
-                errors=[
-                    ValidationIssue(
-                        code="runner_failed",
-                        message=str(exc),
-                        nodeId=skill_node.id,
-                    )
-                ],
+            emit(
+                RunEventType.FAILED,
+                node_id=skill_node.id,
+                message=str(exc),
+                error=str(exc),
             )
+            _call_cleanup(active_runner, skill_node.id)
+            return mark_failed_remaining(
+                remaining_skills,
+                failed_node_id=skill_node.id,
+                issue=ValidationIssue(
+                    code="runner_failed",
+                    message=str(exc),
+                    nodeId=skill_node.id,
+                ),
+            )
+
+        _call_cleanup(active_runner, skill_node.id)
 
         payload = skill_result.outputPayload
         media_type = skill_result.mediaType
@@ -193,10 +485,83 @@ def execute_run(
         completed_outputs[skill_node.id] = (payload, media_type)
         arrival_order[skill_node.id] = arrival_counter
         arrival_counter += 1
+        emit(
+            RunEventType.COMPLETED,
+            node_id=skill_node.id,
+            output=payload,
+            media_type=media_type,
+        )
+
+    if cancel_check():
+        return mark_cancelled_remaining(
+            [],
+            reason="Run cancelled before outputs completed",
+        )
 
     # Passive Artifact Outputs: each branch gets the same upstream payload.
     terminal_payload, terminal_media = completed_outputs[plan.skill_nodes[-1].id]
     for output_node in plan.output_nodes:
+        if cancel_check():
+            return mark_cancelled_remaining(
+                [],
+                reason="Run cancelled during output fan-out",
+            )
+        emit(RunEventType.QUEUED, node_id=output_node.id)
+        emit(RunEventType.RUNNING, node_id=output_node.id)
+        try:
+            _interruptible_sleep(opts.delayMs, cancel_check)
+        except RunCancelled:
+            node_results.append(
+                NodeRunResult(
+                    nodeId=output_node.id,
+                    state=NodeRunState.CANCELLED,
+                    error="Cancelled during output processing",
+                )
+            )
+            emit(
+                RunEventType.CANCELLED,
+                node_id=output_node.id,
+                message="Cancelled during output processing",
+                error="Cancelled during output processing",
+            )
+            remaining_outputs = [
+                o
+                for o in plan.output_nodes
+                if o.id not in {r.nodeId for r in node_results}
+            ]
+            for o in remaining_outputs:
+                reason = "Branch stopped: run cancelled"
+                node_results.append(
+                    NodeRunResult(
+                        nodeId=o.id,
+                        state=NodeRunState.CANCELLED,
+                        error=reason,
+                    )
+                )
+                emit(
+                    RunEventType.CANCELLED,
+                    node_id=o.id,
+                    message=reason,
+                    error=reason,
+                )
+            emit(
+                RunEventType.CANCELLED,
+                scope=RunEventScope.RUN,
+                message="Run cancelled during output fan-out",
+                error="Run cancelled during output fan-out",
+            )
+            return RunResponse(
+                id=rid,
+                status="cancelled",
+                nodeResults=node_results,
+                errors=[
+                    ValidationIssue(
+                        code="cancelled",
+                        message="Run cancelled during output fan-out",
+                    )
+                ],
+            )
+
         node_results.append(
             NodeRunResult(
                 nodeId=output_node.id,
@@ -205,11 +570,134 @@ def execute_run(
                 mediaType=terminal_media,
             )
         )
+        emit(
+            RunEventType.COMPLETED,
+            node_id=output_node.id,
+            output=terminal_payload,
+            media_type=terminal_media,
+        )
 
+    emit(
+        RunEventType.COMPLETED,
+        scope=RunEventScope.RUN,
+        message="Run completed",
+        output=terminal_payload,
+        media_type=terminal_media,
+    )
     return RunResponse(
-        id=run_id,
+        id=rid,
         status="completed",
         nodeResults=node_results,
         output=terminal_payload,
         mediaType=terminal_media,
     )
+
+
+def start_run(
+    workflow: Workflow,
+    *,
+    options: RunOptions | None = None,
+    runner: Runner | None = None,
+    store: RunStore | None = None,
+) -> RunResponse:
+    """
+    Validate and start a background run. Returns immediately with queued/rejected.
+
+    Live progress is available via the run store / SSE endpoint.
+    """
+    active_store = store or run_store
+    opts = options or RunOptions()
+
+    # Validate up-front so rejected runs never enter the store as live runs.
+    validation = validate_workflow(workflow)
+    if not validation.valid:
+        rid = str(uuid.uuid4())
+        return RunResponse(
+            id=rid,
+            status="rejected",
+            errors=list(validation.errors),
+        )
+
+    plan, shape_errors = plan_linear_chain(workflow)
+    if shape_errors or plan is None:
+        rid = str(uuid.uuid4())
+        return RunResponse(
+            id=rid,
+            status="rejected",
+            errors=shape_errors,
+        )
+
+    record = active_store.create(status="queued")
+    rid = record.id
+    active_runner: Runner = runner if runner is not None else FakeRunner()
+    # Snapshot before starting the worker so POST always returns queued
+    # (avoids a race when delayMs=0 finishes instantly).
+    initial = record.snapshot(include_events=False)
+
+    def _worker() -> None:
+        try:
+            active_store.update_status(rid, "running")
+            result = execute_run(
+                workflow,
+                runner=active_runner,
+                options=opts,
+                on_event=active_store.event_callback(rid),
+                is_cancelled=lambda: active_store.is_cancel_requested(rid),
+                run_id=rid,
+            )
+            active_store.set_results(
+                rid,
+                status=result.status,
+                node_results=result.nodeResults,
+                errors=result.errors,
+                output=result.output,
+                media_type=result.mediaType,
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            active_store.append_event(
+                rid,
+                event_type=RunEventType.FAILED,
+                scope=RunEventScope.RUN,
+                message=str(exc),
+                error=str(exc),
+            )
+            active_store.set_results(
+                rid,
+                status="failed",
+                node_results=[],
+                errors=[
+                    ValidationIssue(
+                        code="internal_error",
+                        message=str(exc),
+                    )
+                ],
+            )
+
+    thread = threading.Thread(target=_worker, name=f"mitos-run-{rid}", daemon=True)
+    thread.start()
+    return initial
+
+
+def cancel_run(
+    run_id: str,
+    *,
+    store: RunStore | None = None,
+) -> RunResponse | None:
+    """Request cancellation of an in-flight run."""
+    active_store = store or run_store
+    record = active_store.request_cancel(run_id)
+    if record is None:
+        return None
+    return record.snapshot(include_events=True)
+
+
+def get_run(
+    run_id: str,
+    *,
+    store: RunStore | None = None,
+) -> RunResponse | None:
+    active_store = store or run_store
+    record = active_store.get(run_id)
+    if record is None:
+        return None
+    return record.snapshot(include_events=True)

@@ -1,19 +1,49 @@
-"""Phase 11–14 — fake runner + synchronous POST /api/runs integration tests."""
+"""Phase 11–16 — fake runner + POST /api/runs + live snapshot polling."""
 
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
 from mitos_api.domain import Workflow
 from mitos_api.main import app
+from mitos_api.services.run_store import run_store
 from mitos_api.services.runners import FakeRunner, SkillExecutionRequest, SkillExecutionResult
 from mitos_api.services.runners.base import Runner
 from mitos_api.services.runs import execute_run
 
 client = TestClient(app)
+
+
+TERMINAL = {"completed", "failed", "cancelled", "rejected"}
+
+
+def _wait_run(run_id: str, *, timeout: float = 5.0) -> dict:
+    """Poll GET /api/runs/{id} until the run reaches a terminal status."""
+    deadline = time.monotonic() + timeout
+    last = None
+    while time.monotonic() < deadline:
+        response = client.get(f"/api/runs/{run_id}")
+        assert response.status_code == 200
+        last = response.json()
+        if last["status"] in TERMINAL:
+            return last
+        time.sleep(0.02)
+    raise AssertionError(f"Run {run_id} did not finish; last={last}")
+
+
+def _post_and_wait(payload: dict, *, timeout: float = 5.0) -> dict:
+    response = client.post("/api/runs", json=payload)
+    assert response.status_code == 200
+    body = response.json()
+    if body["status"] == "rejected":
+        return body
+    assert body["status"] == "queued"
+    return _wait_run(body["id"], timeout=timeout)
+
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -326,11 +356,9 @@ def test_execute_missing_input_blocks_skill():
 
 
 def test_runs_endpoint_simple_linear():
+    run_store.clear()
     payload = {"workflow": _load_fixture("simple_linear.json")}
-    response = client.post("/api/runs", json=payload)
-
-    assert response.status_code == 200
-    body = response.json()
+    body = _post_and_wait(payload)
     assert body["status"] == "completed"
     assert body["output"] == EXPECTED_FAKE_OUTPUT
     assert body["mediaType"] == "text/plain"
@@ -347,11 +375,9 @@ def test_runs_endpoint_simple_linear():
 
 
 def test_runs_endpoint_linear_chain():
+    run_store.clear()
     payload = {"workflow": _load_fixture("linear_chain.json")}
-    response = client.post("/api/runs", json=payload)
-
-    assert response.status_code == 200
-    body = response.json()
+    body = _post_and_wait(payload)
     assert body["status"] == "completed"
     assert body["output"] == EXPECTED_CHAIN_OUTPUT
 
@@ -362,11 +388,9 @@ def test_runs_endpoint_linear_chain():
 
 
 def test_runs_endpoint_three_outputs():
+    run_store.clear()
     payload = {"workflow": _load_fixture("three_outputs.json")}
-    response = client.post("/api/runs", json=payload)
-
-    assert response.status_code == 200
-    body = response.json()
+    body = _post_and_wait(payload)
     assert body["status"] == "completed"
     assert body["output"] == EXPECTED_FAKE_OUTPUT
     assert body["mediaType"] == "text/plain"
@@ -380,11 +404,9 @@ def test_runs_endpoint_three_outputs():
 
 
 def test_runs_endpoint_two_named_inputs():
+    run_store.clear()
     payload = {"workflow": _load_fixture("two_inputs_named.json")}
-    response = client.post("/api/runs", json=payload)
-
-    assert response.status_code == 200
-    body = response.json()
+    body = _post_and_wait(payload)
     assert body["status"] == "completed"
     assert body["output"] == EXPECTED_JOIN_OUTPUT
     assert body["errors"] == []
@@ -397,11 +419,9 @@ def test_runs_endpoint_two_named_inputs():
 
 
 def test_runs_endpoint_missing_input_blocked():
+    run_store.clear()
     payload = {"workflow": _load_fixture("missing_input_port.json")}
-    response = client.post("/api/runs", json=payload)
-
-    assert response.status_code == 200
-    body = response.json()
+    body = _post_and_wait(payload)
     assert body["status"] == "failed"
     assert body["output"] is None
     assert any(e["code"] == "blocked" for e in body["errors"])
@@ -412,11 +432,9 @@ def test_runs_endpoint_missing_input_blocked():
 
 
 def test_runs_endpoint_rejects_skill_to_skill_branch():
+    run_store.clear()
     payload = {"workflow": _load_fixture("unsupported_branch.json")}
-    response = client.post("/api/runs", json=payload)
-
-    assert response.status_code == 200
-    body = response.json()
+    body = _post_and_wait(payload)
     assert body["status"] == "rejected"
     assert body["output"] is None
     assert body["nodeResults"] == []
@@ -424,54 +442,44 @@ def test_runs_endpoint_rejects_skill_to_skill_branch():
 
 
 def test_runs_endpoint_rejects_mixed_skill_and_output_branch():
+    run_store.clear()
     payload = {"workflow": _load_fixture("unsupported_mixed_branch.json")}
-    response = client.post("/api/runs", json=payload)
-
-    assert response.status_code == 200
-    body = response.json()
+    body = _post_and_wait(payload)
     assert body["status"] == "rejected"
     assert any(e["code"] == "unsupported_graph" for e in body["errors"])
 
 
 def test_runs_endpoint_rejects_mixed_output_modes():
+    run_store.clear()
     payload = {"workflow": _load_fixture("unsupported_mixed_output_modes.json")}
-    response = client.post("/api/runs", json=payload)
-
-    assert response.status_code == 200
-    body = response.json()
+    body = _post_and_wait(payload)
     assert body["status"] == "rejected"
     assert any(e["code"] == "unsupported_graph" for e in body["errors"])
     assert any("pass-through" in e["message"] for e in body["errors"])
 
 
 def test_runs_endpoint_rejects_same_port_join():
+    run_store.clear()
     payload = {"workflow": _load_fixture("unsupported_join.json")}
-    response = client.post("/api/runs", json=payload)
-
-    assert response.status_code == 200
-    body = response.json()
+    body = _post_and_wait(payload)
     assert body["status"] == "rejected"
     assert any(e["code"] == "unsupported_graph" for e in body["errors"])
     assert any("port" in e["message"] for e in body["errors"])
 
 
 def test_runs_endpoint_rejects_selector_output():
+    run_store.clear()
     payload = {"workflow": _load_fixture("unsupported_selector_output.json")}
-    response = client.post("/api/runs", json=payload)
-
-    assert response.status_code == 200
-    body = response.json()
+    body = _post_and_wait(payload)
     assert body["status"] == "rejected"
     assert any(e["code"] == "unsupported_graph" for e in body["errors"])
     assert any("pass-through" in e["message"] for e in body["errors"])
 
 
 def test_runs_endpoint_rejects_invalid_workflow():
+    run_store.clear()
     payload = {"workflow": _load_fixture("cycle.json")}
-    response = client.post("/api/runs", json=payload)
-
-    assert response.status_code == 200
-    body = response.json()
+    body = _post_and_wait(payload)
     assert body["status"] == "rejected"
     assert any(e["code"] == "cycle" for e in body["errors"])
 

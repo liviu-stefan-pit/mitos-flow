@@ -298,4 +298,12 @@ describe("WorkflowCanvas", () => {
       expect.objectContaining({ method: "POST" }),
     );
   });
+  it("shows run controls and activity timeline", () => {
+    render(<WorkflowCanvas />);
+    expect(screen.getByTestId("palette-run-workflow")).toBeDisabled();
+    expect(screen.getByTestId("palette-cancel-run")).toBeDisabled();
+    expect(screen.getByTestId("activity-timeline")).toBeInTheDocument();
+    expect(screen.getByTestId("activity-run-status")).toHaveTextContent("idle");
+  });
+
 });

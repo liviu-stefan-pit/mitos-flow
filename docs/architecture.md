@@ -133,8 +133,10 @@ One **Artifact Output** node replaces separate Save and Output nodes.
 | --- | --- | --- | --- |
 | `/api/health` | 1 | GET | Health check |
 | `/api/workflows/validate` | 9 | POST | Validate workflow JSON |
-| `/api/runs` | 11 | POST | Start a synchronous run |
+| `/api/runs` | 11/15 | POST | Start a run (returns queued; live via SSE) |
+| `/api/runs/{id}` | 15 | GET | Run snapshot + event log |
 | `/api/runs/{id}/events` | 15 | GET (SSE) | Live run events |
+| `/api/runs/{id}/cancel` | 16 | POST | Cancel an in-flight run |
 
 ---
 

@@ -2,8 +2,8 @@
 
 > **Purpose of this document:** Single source of truth for what Mitos Flow is, how it should be built, and which phase is done. Update checkboxes as phases complete. Point every implementation chat at this file first.
 
-**Last updated:** 2026-07-26  
-**Current phase:** 15 (next)  
+**Last updated:** 2026-07-29  
+**Current phase:** 17 (next)  
 **Stack:** Local React/Vite frontend + FastAPI backend · Cursor CLI first · Fake runner before real CLI
 
 ---
@@ -115,7 +115,7 @@ Rules:
 | Foundation | 0–3 | [x] |
 | Graph editor | 4–8 | [x] |
 | Shared workflow model | 9–10 | [x] |
-| Deterministic execution | 11–16 | [ ] |
+| Deterministic execution | 11–16 | [x] |
 | Reusable local assets | 17–20 | [ ] |
 | Cursor CLI adapter | 21–24 | [ ] |
 | Artifact outputs & observability | 25–28 | [ ] |
@@ -228,13 +228,13 @@ Rules:
   - **Gate:** Arrival order does not alter envelope; missing inputs → blocked-node error
   - **Manual check:** Two inputs into one Skill; both required before run
 
-- [ ] **Phase 15 — Live run events in the UI**
+- [x] **Phase 15 — Live run events in the UI**
   - SSE for queued/running/completed/failed events
   - Animate active data edges; selected node activity timeline
   - **Gate:** Fake delayed runs advance node-by-node; reconnect does not duplicate terminal events
   - **Manual check:** Watch run progress live on canvas
 
-- [ ] **Phase 16 — Cancellation and error boundaries**
+- [x] **Phase 16 — Cancellation and error boundaries**
   - Run cancellation, per-node timeout, cleanup hooks, branch failure reporting
   - **Gate:** Cancel delayed fake run; no downstream node starts
   - **Manual check:** Cancel mid-run; graph shows stopped state
@@ -429,8 +429,8 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 12 | 2026-07-26 | DAG scheduler for linear Skill chains; failure-stop |
 | 13 | 2026-07-26 | Skill→N pass-through outputs; one runner call; three_outputs fixture |
 | 14 | 2026-07-26 | Named input ports + InputEnvelope; wait_for_all joins; blocked on missing |
-| 15 | | |
-| 16 | | |
+| 15 | 2026-07-29 | SSE live events, edge animation, activity timeline |
+| 16 | 2026-07-29 | Cancel, timeout, cleanup hooks, branch failure reporting |
 | 17 | | |
 | 18 | | |
 | 19 | | |

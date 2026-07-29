@@ -2,8 +2,8 @@
 
 > Running log of completed work. Update after each phase.
 
-**Last updated:** 2026-07-26  
-**Current phase:** 15 (next)
+**Last updated:** 2026-07-29  
+**Current phase:** 17 (next)
 
 ---
 
@@ -26,6 +26,8 @@
 | 12 | 2026-07-26 | DAG scheduler for linear Skill chains |
 | 13 | 2026-07-26 | Branching to multiple passive Artifact Outputs |
 | 14 | 2026-07-26 | Named inputs + wait_for_all joins |
+| 15 | 2026-07-29 | Live SSE run events + canvas animation/timeline |
+| 16 | 2026-07-29 | Cancel, per-node timeout, cleanup, branch failure |
 
 ---
 
@@ -215,6 +217,32 @@
 - Backend tests: 51 passing; frontend suite unchanged: 47 passing (no regressions)
 - **Manual check:** `POST /api/runs` with two named Inputs → Skill → Output yields `fake::Draft::brief=Hello A|context=Hello B`; missing `context` port blocks the Skill
 
+### Phase 15 — Live run events in the UI
+
+**Status:** Complete  
+**Date:** 2026-07-29
+
+- `POST /api/runs` returns immediately with `queued`; background thread executes with optional `options.delayMs`
+- `GET /api/runs/{id}` snapshot + `GET /api/runs/{id}/events` SSE stream (`queued` → `running` → `completed`/`failed`)
+- In-memory `RunStore` with sequenced event ids; reconnect via `Last-Event-ID` does not duplicate terminal run events
+- Frontend: Run workflow button, animated active data edges, node run-state styling, Activity timeline (filters when a node is selected)
+- Default live delay 400ms so progress is visible node-by-node
+- Backend tests: delayed node-by-node events + SSE reconnect; frontend: runsApi + useWorkflowRun + canvas controls
+- **Manual check:** Build a linear chain, click Run workflow, watch nodes/edges/timeline advance live
+
+### Phase 16 — Cancellation and error boundaries
+
+**Status:** Complete  
+**Date:** 2026-07-29
+
+- `POST /api/runs/{id}/cancel` sets cancel flag; orchestrator stops before the next Skill/Output starts
+- Per-node `options.nodeTimeoutMs` via threaded Skill execute; timed-out Skills get `timeout` state
+- Runner `cleanup(skillNodeId)` hook invoked after success, failure, timeout, and cancel-before-execute
+- Branch failure reporting: each skipped/cancelled output carries an upstream/branch error message
+- UI Cancel run button + stopped banner when status is `cancelled`
+- Gate tests: cancel delayed chain → skill-2 never runs; timeout + cleanup + three-output branch skip
+- **Manual check:** Start a delayed run, click Cancel mid-run; graph shows stopped/cancelled state and downstream nodes do not complete
+
 ---
 
 ## Known issues
@@ -225,4 +253,4 @@ _None._
 
 ## Next up
 
-- Phase 15: Live run events in the UI
+- Phase 17: Skill and Rules file import

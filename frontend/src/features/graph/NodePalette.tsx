@@ -10,6 +10,10 @@ type NodePaletteProps = {
   onExportWorkflow: () => void;
   onValidateWorkflow: () => void;
   validating?: boolean;
+  onRunWorkflow?: () => void;
+  onCancelRun?: () => void;
+  running?: boolean;
+  canRun?: boolean;
 };
 
 export function NodePalette({
@@ -21,6 +25,10 @@ export function NodePalette({
   onExportWorkflow,
   onValidateWorkflow,
   validating = false,
+  onRunWorkflow,
+  onCancelRun,
+  running = false,
+  canRun = true,
 }: NodePaletteProps) {
   return (
     <div className="node-palette" data-testid="node-palette">
@@ -83,6 +91,27 @@ export function NodePalette({
           {validating ? "Validating…" : "Validate with API"}
         </button>
       </div>
+      {onRunWorkflow ? (
+        <div className="node-palette-section node-palette-run-actions">
+          <span className="node-palette-label">Run</span>
+          <button
+            type="button"
+            data-testid="palette-run-workflow"
+            disabled={!canRun || running}
+            onClick={onRunWorkflow}
+          >
+            {running ? "Running…" : "Run workflow"}
+          </button>
+          <button
+            type="button"
+            data-testid="palette-cancel-run"
+            disabled={!running}
+            onClick={onCancelRun}
+          >
+            Cancel run
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
