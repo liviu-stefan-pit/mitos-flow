@@ -37,6 +37,7 @@
 | 22 | 2026-08-01 | Cursor command builder + dry-run preview (no spawn) |
 | 23 | 2026-08-01 | Execute one Cursor Skill (spawn + capture; stub failure/timeout) |
 | 24 | 2026-08-01 | Per-Skill Fake/Cursor runners for chains and joins |
+| 24.5 | 2026-08-01 | Per-Skill Cursor model selection (default composer-2.5) |
 
 ---
 
@@ -406,6 +407,24 @@
 - Gate tests: chain + join complete with stubs; confirmation reject for per-node Cursor
 - Backend tests: 140 passing (5 new in `test_cursor_chains.py`); frontend: 77 passing; `tsc -b --noEmit` clean
 - **Manual check:** Multi-node flow with Cursor on one Skill only; Fake on the other; run completes
+
+---
+
+### Phase 24.5 — Per-Skill Cursor model selection
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- `SkillNodeSettings.model` defaults to `composer-2.5`; meaningful when `runner=cursor`
+- `GET /api/cursor/models` runs `agent --list-models` (read-only); filters out `auto`; hard-appends Composer default
+- Cursor spawn always includes `--model <id>` (Skill setting → run-level fallback → `composer-2.5`)
+- Per-Skill model on `SkillExecutionRequest` so mixed models work with one shared CursorRunner
+- Trace: Skill completed message + `NodeRunResult.model` / SSE `model` for Activity timeline
+- Inspector: Cursor model `<select>` when runner=Cursor; hidden for Fake; warning when CLI list fails
+- Canvas badge shows model id under Cursor runner badge
+- Gate fixtures/tests: parse filters auto; default argv `--model composer-2.5`; two Skills different models
+- Backend tests: 148 passing (8 new in `test_cursor_models.py`); frontend: 79 passing; `tsc -b --noEmit` clean
+- **Manual check:** Cursor Skill with default Composer; Activity shows `model composer-2.5`; change model and re-run
 
 ---
 

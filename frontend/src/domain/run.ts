@@ -84,6 +84,7 @@ export type NodeRunResult = {
   exitCode?: number | null;
   elapsedMs?: number | null;
   usage?: RunnerUsage | null;
+  model?: string | null;
 };
 
 export type AttachedRule = {
@@ -122,6 +123,7 @@ export type RunEvent = {
   exitCode?: number | null;
   elapsedMs?: number | null;
   usage?: RunnerUsage | null;
+  model?: string | null;
   timestamp: string;
 };
 

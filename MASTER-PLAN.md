@@ -119,6 +119,7 @@ Rules:
 | Reusable local assets | 17–20 | [x] |
 | Regression harness | 20.5 | [x] |
 | Cursor CLI adapter | 21–24 | [x] |
+| Per-Skill Cursor models | 24.5 | [x] |
 | Artifact outputs & observability | 25–28 | [ ] |
 | Portability & hardening | 29–31 | [ ] |
 
@@ -302,6 +303,12 @@ Rules:
   - **Gate:** Two-Skill chain + two-input join complete; only manual smoke uses real tokens
   - **Manual check:** Multi-node flow with Cursor on one node
 
+- [x] **Phase 24.5 — Per-Skill Cursor model selection**
+  - Preferred model per Cursor Skill from `agent --list-models`; default `composer-2.5` (never silent `auto`)
+  - `GET /api/cursor/models`; always pass `--model` on Cursor spawn; inspector picker
+  - **Gate:** Parse filters `auto`; default argv has `--model composer-2.5`; two Skills can use different models
+  - **Manual check:** Cursor Skill leaves Composer default; Activity/dry-run shows `--model composer-2.5`; change model and confirm next run
+
 ---
 
 ### Artifact outputs and observability
@@ -449,6 +456,7 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 22 | 2026-08-01 | Cursor command builder + dry-run preview (no spawn); redaction + workspace checks |
 | 23 | 2026-08-01 | CursorRunner spawn for Input→Skill→Output; capture + stub failure/timeout |
 | 24 | 2026-08-01 | Per-Skill Fake/Cursor runners; chain + join with stubs |
+| 24.5 | 2026-08-01 | Per-Skill Cursor model selection; default composer-2.5 |
 | 25 | | |
 | 26 | | |
 | 27 | | |

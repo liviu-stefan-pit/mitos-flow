@@ -85,6 +85,10 @@ class InputNodeSettings(BaseModel):
 
 SkillRunnerKind = Literal["fake", "cursor"]
 
+# Phase 24.5: cheapest Composer model — never let a Skill silently fall
+# through to the Cursor CLI's expensive `auto` model.
+DEFAULT_CURSOR_SKILL_MODEL = "composer-2.5"
+
 
 class SkillNodeSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -93,6 +97,10 @@ class SkillNodeSettings(BaseModel):
     joinPolicy: JoinPolicy = JoinPolicy.WAIT_FOR_ALL
     # Phase 24: per-Skill Fake or Cursor runner (default fake).
     runner: SkillRunnerKind = "fake"
+    # Phase 24.5: preferred Cursor model for this Skill (meaningful only when
+    # runner="cursor"). Always non-empty so Cursor is never spawned without
+    # an explicit --model.
+    model: str = Field(default=DEFAULT_CURSOR_SKILL_MODEL, min_length=1)
 
 
 class KnowledgeBaseNodeSettings(BaseModel):

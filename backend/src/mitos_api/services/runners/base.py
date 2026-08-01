@@ -23,6 +23,8 @@ class SkillExecutionRequest(BaseModel):
     inputs: list[InputEnvelope] = Field(default_factory=list)
     rules: list[AttachedRule] = Field(default_factory=list)
     knowledgeChunks: list[CitedChunk] = Field(default_factory=list)
+    # Phase 24.5: resolved Cursor model for this Skill (None for Fake).
+    model: str | None = None
 
 
 class SkillExecutionResult(BaseModel):
@@ -38,6 +40,8 @@ class SkillExecutionResult(BaseModel):
     exitCode: int | None = None
     elapsedMs: int | None = None
     usage: RunnerUsage | None = None
+    # Phase 24.5 — model actually used for this Cursor spawn
+    model: str | None = None
 
 
 class Runner(Protocol):

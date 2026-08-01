@@ -117,6 +117,7 @@ class RunStore:
         exit_code: int | None = None,
         elapsed_ms: int | None = None,
         usage: RunnerUsage | None = None,
+        model: str | None = None,
     ) -> RunEvent | None:
         record = self.get(run_id)
         if record is None:
@@ -161,6 +162,7 @@ class RunStore:
                 exitCode=exit_code,
                 elapsedMs=elapsed_ms,
                 usage=usage,
+                model=model,
                 timestamp=_utc_now_iso(),
             )
             record.events.append(event)
@@ -275,6 +277,7 @@ class RunStore:
             exit_code: int | None = None,
             elapsed_ms: int | None = None,
             usage: RunnerUsage | None = None,
+            model: str | None = None,
         ) -> None:
             self.append_event(
                 run_id,
@@ -293,6 +296,7 @@ class RunStore:
                 exit_code=exit_code,
                 elapsed_ms=elapsed_ms,
                 usage=usage,
+                model=model,
             )
 
         return _emit

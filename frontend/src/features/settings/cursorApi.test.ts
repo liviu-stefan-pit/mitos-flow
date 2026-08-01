@@ -51,6 +51,32 @@ describe("cursorApi", () => {
     expect(fetch).toHaveBeenCalledWith(`${getApiUrl()}/api/cursor/capability`);
   });
 
+  it("fetches models from /api/cursor/models", async () => {
+    const report = {
+      status: "available" as const,
+      models: [
+        { id: "composer-2.5", label: "composer-2.5" },
+        { id: "gpt-5.2", label: "GPT-5.2" },
+      ],
+      defaultModel: "composer-2.5",
+      message: "ok",
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => report,
+      }),
+    );
+
+    const { fetchCursorModels } = await import("./cursorApi");
+    const result = await fetchCursorModels();
+    expect(result.defaultModel).toBe("composer-2.5");
+    expect(result.models.map((m) => m.id)).not.toContain("auto");
+    expect(fetch).toHaveBeenCalledWith(`${getApiUrl()}/api/cursor/models`);
+  });
+
   it("throws CursorApiError when the backend is unreachable", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
 

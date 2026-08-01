@@ -107,7 +107,83 @@ describe("NodeInspector — Skill runner (Phase 24)", () => {
     );
 
     expect(screen.getByTestId("inspector-runner-fake")).toBeChecked();
+    expect(screen.queryByTestId("inspector-cursor-model")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("inspector-runner-cursor"));
-    expect(onUpdateData).toHaveBeenCalledWith("skill-1", { runner: "cursor" });
+    expect(onUpdateData).toHaveBeenCalledWith("skill-1", {
+      runner: "cursor",
+      model: "composer-2.5",
+    });
+  });
+});
+
+describe("NodeInspector — Cursor model (Phase 24.5)", () => {
+  it("shows model picker when Cursor is selected and hides it for Fake", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          status: "available",
+          models: [
+            { id: "composer-2.5", label: "composer-2.5" },
+            { id: "gpt-5.2", label: "GPT-5.2" },
+          ],
+          defaultModel: "composer-2.5",
+          message: "ok",
+        }),
+      }),
+    );
+
+    const onUpdateData = vi.fn();
+    const { rerender } = render(
+      <NodeInspector
+        node={{
+          id: "skill-1",
+          type: "skill",
+          selected: true,
+          position: { x: 0, y: 0 },
+          data: {
+            label: "Draft",
+            description: "",
+            runner: "cursor",
+            model: "composer-2.5",
+          },
+        }}
+        nodes={[]}
+        edges={[]}
+        onUpdateData={onUpdateData}
+        onUpdateEdgeData={vi.fn()}
+      />,
+    );
+
+    const select = await screen.findByTestId("inspector-cursor-model");
+    expect(select).toHaveValue("composer-2.5");
+
+    fireEvent.change(select, { target: { value: "gpt-5.2" } });
+    expect(onUpdateData).toHaveBeenCalledWith("skill-1", { model: "gpt-5.2" });
+
+    rerender(
+      <NodeInspector
+        node={{
+          id: "skill-1",
+          type: "skill",
+          selected: true,
+          position: { x: 0, y: 0 },
+          data: {
+            label: "Draft",
+            description: "",
+            runner: "fake",
+            model: "composer-2.5",
+          },
+        }}
+        nodes={[]}
+        edges={[]}
+        onUpdateData={onUpdateData}
+        onUpdateEdgeData={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId("inspector-cursor-model")).not.toBeInTheDocument();
+
+    vi.unstubAllGlobals();
   });
 });

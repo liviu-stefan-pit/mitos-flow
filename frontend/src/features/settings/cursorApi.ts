@@ -3,6 +3,7 @@ import type {
   CursorCapabilityReport,
   CursorDryRunRequest,
   CursorDryRunResponse,
+  CursorModelsReport,
 } from "../../domain/cursor";
 
 export class CursorApiError extends Error {
@@ -35,6 +36,28 @@ export async function fetchCursorCapability(): Promise<CursorCapabilityReport> {
   }
 
   return (await response.json()) as CursorCapabilityReport;
+}
+
+/** Fetch Cursor models via agent --list-models (Phase 24.5). */
+export async function fetchCursorModels(): Promise<CursorModelsReport> {
+  let response: Response;
+  try {
+    response = await fetch(`${getApiUrl()}/api/cursor/models`);
+  } catch {
+    throw new CursorApiError(
+      "Could not reach the backend to list Cursor models.",
+    );
+  }
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new CursorApiError(
+      detail || `Cursor models list failed (${response.status}).`,
+      response.status,
+    );
+  }
+
+  return (await response.json()) as CursorModelsReport;
 }
 
 /** Build a redacted Cursor command preview without spawning (Phase 22). */

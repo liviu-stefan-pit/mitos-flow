@@ -42,6 +42,17 @@
   color: #7c3aed;
 }
 
+.graph-node-model {
+  margin-top: 0.15rem;
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: #6b7280;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .graph-node-input {
   border-left: 3px solid #3b82f6;
 }

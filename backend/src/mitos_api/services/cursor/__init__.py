@@ -18,6 +18,13 @@ from mitos_api.services.cursor.executor import (
     parse_usage_metadata,
     spawn_cursor_command,
 )
+from mitos_api.services.cursor.models import (
+    ensure_default_model,
+    get_cursor_models,
+    list_cursor_models,
+    parse_list_models_output,
+    set_cursor_models_override,
+)
 from mitos_api.services.cursor.probe import (
     MINIMUM_CURSOR_CLI_VERSION,
     get_cursor_capability,
@@ -35,13 +42,18 @@ __all__ = [
     "build_cursor_command",
     "check_workspace_boundary",
     "dry_run_cursor_command",
+    "ensure_default_model",
     "get_cursor_capability",
+    "get_cursor_models",
+    "list_cursor_models",
+    "parse_list_models_output",
     "parse_usage_metadata",
     "preview_built_command",
     "probe_cursor_capability",
     "quote_windows_arg",
     "quote_windows_command",
     "redact_argv",
+    "set_cursor_models_override",
     "set_cursor_probe_override",
     "spawn_cursor_command",
 ]

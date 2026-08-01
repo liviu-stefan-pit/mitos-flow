@@ -6,6 +6,7 @@ import type { Edge, Node } from "@xyflow/react";
 import {
   defaultPortsForKind,
   defaultSettingsForKind,
+  DEFAULT_CURSOR_SKILL_MODEL,
   DEFAULT_KB_THRESHOLD,
   DEFAULT_KB_TOP_K,
   type ArtifactOutputMode,
@@ -159,11 +160,16 @@ function settingsFromUiData(kind: NodeKind, data: unknown): NodeSettings {
         skill.runner === "cursor" || skill.runner === "fake"
           ? skill.runner
           : "fake";
+      const model =
+        typeof skill.model === "string" && skill.model.trim().length > 0
+          ? skill.model.trim()
+          : DEFAULT_CURSOR_SKILL_MODEL;
       return {
         description:
           typeof skill.description === "string" ? skill.description : "",
         joinPolicy: "wait_for_all",
         runner,
+        model,
       };
     }
     case "knowledgeBase": {

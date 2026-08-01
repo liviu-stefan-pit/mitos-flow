@@ -23,7 +23,12 @@ from mitos_api.domain.cursor import (
     CursorSkillPayload,
     DEFAULT_CURSOR_TIMEOUT_MS,
 )
-from mitos_api.domain.workflow import AttachedRule, CitedChunk, InputEnvelope
+from mitos_api.domain.workflow import (
+    AttachedRule,
+    CitedChunk,
+    DEFAULT_CURSOR_SKILL_MODEL,
+    InputEnvelope,
+)
 from mitos_api.services.cursor.probe import (
     get_cursor_capability,
 )
@@ -312,7 +317,9 @@ def build_cursor_command(
     if flags.force and force:
         argv.append("--force")
 
-    if flags.model and model and model.strip():
+    # Phase 24.5: always pass --model when a model id is provided so the CLI
+    # never silently falls through to expensive ``auto``.
+    if model and model.strip():
         argv.extend(["--model", model.strip()])
 
     if flags.apiKey and api_key and api_key.strip():
@@ -405,13 +412,16 @@ def dry_run_cursor_command(
     if api_key is None:
         api_key = (env.get("CURSOR_API_KEY") or "").strip() or None
 
+    # Phase 24.5: dry-run defaults to composer-2.5 so preview never omits --model.
+    model = (options.model or "").strip() or DEFAULT_CURSOR_SKILL_MODEL
+
     try:
         built = build_cursor_command(
             body.request,
             executable=executable,
             workspace=workspace,
             features=features,
-            model=options.model,
+            model=model,
             api_key=api_key,
             timeout_ms=options.timeoutMs,
             force=options.force,

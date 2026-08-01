@@ -128,11 +128,20 @@ export function ActivityTimeline({
                   ))}
                 </ul>
               ) : null}
-              {event.elapsedMs != null || event.exitCode != null ? (
+              {event.elapsedMs != null || event.exitCode != null || event.model ? (
                 <span
                   className="activity-event-capture"
                   data-testid="activity-cursor-capture"
                 >
+                  {event.model ? (
+                    <span data-testid="activity-cursor-model">
+                      model {event.model}
+                    </span>
+                  ) : null}
+                  {event.model &&
+                  (event.elapsedMs != null || event.exitCode != null)
+                    ? " · "
+                    : null}
                   {event.elapsedMs != null ? `${event.elapsedMs}ms` : null}
                   {event.elapsedMs != null && event.exitCode != null
                     ? " · "

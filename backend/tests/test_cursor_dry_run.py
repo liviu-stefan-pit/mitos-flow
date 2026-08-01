@@ -127,7 +127,8 @@ def test_build_omits_flags_when_features_absent(tmp_path: Path):
         trust=True,
         allowed_root=tmp_path,
     )
-    assert built.argv == ["/usr/bin/agent"]
+    # Phase 24.5: --model is always included when a model id is provided.
+    assert built.argv == ["/usr/bin/agent", "--model", "composer-2"]
     assert built.stdin.startswith("# Skill: cursor-smoke")
 
 

@@ -1,0 +1,77 @@
+{
+  "metadata": {
+    "name": "Cursor two-skill different models (Phase 24.5)",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "kind": "input",
+      "label": "Brief",
+      "position": { "x": 0, "y": 0 },
+      "settings": {
+        "mediaType": "text/plain",
+        "content": "Hello from input"
+      }
+    },
+    {
+      "id": "skill-1",
+      "kind": "skill",
+      "label": "Draft",
+      "position": { "x": 200, "y": 0 },
+      "settings": {
+        "description": "First skill Composer",
+        "joinPolicy": "wait_for_all",
+        "runner": "cursor",
+        "model": "composer-2.5"
+      }
+    },
+    {
+      "id": "skill-2",
+      "kind": "skill",
+      "label": "Polish",
+      "position": { "x": 400, "y": 0 },
+      "settings": {
+        "description": "Second skill GPT",
+        "joinPolicy": "wait_for_all",
+        "runner": "cursor",
+        "model": "gpt-5.2"
+      }
+    },
+    {
+      "id": "output-1",
+      "kind": "artifactOutput",
+      "label": "Out",
+      "position": { "x": 600, "y": 0 },
+      "settings": {
+        "mode": "pass-through"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-1",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e2",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-1",
+      "targetNodeId": "skill-2",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e3",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-2",
+      "targetNodeId": "output-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    }
+  ]
+}

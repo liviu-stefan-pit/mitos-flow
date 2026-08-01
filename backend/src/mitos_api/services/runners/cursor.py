@@ -11,6 +11,7 @@ from mitos_api.domain.cursor import (
     CursorRunOptions,
     DEFAULT_CURSOR_TIMEOUT_MS,
 )
+from mitos_api.domain.workflow import DEFAULT_CURSOR_SKILL_MODEL
 from mitos_api.services.cursor.command_builder import (
     CursorCommandBuildError,
     build_cursor_command,
@@ -130,13 +131,19 @@ class CursorRunner:
         )
 
     def execute(self, request: SkillExecutionRequest) -> SkillExecutionResult:
+        # Phase 24.5: per-Skill model wins; runner/run-level fallback; then default.
+        effective_model = (
+            (request.model or "").strip()
+            or (self.model or "").strip()
+            or DEFAULT_CURSOR_SKILL_MODEL
+        )
         try:
             built = build_cursor_command(
                 request,
                 executable=self.executable,
                 workspace=self.workspace,
                 features=self.features,
-                model=self.model,
+                model=effective_model,
                 api_key=self.api_key,
                 timeout_ms=self.timeout_ms,
                 force=self.force,
@@ -179,6 +186,7 @@ class CursorRunner:
             exitCode=process.exit_code,
             elapsedMs=process.elapsed_ms,
             usage=process.usage,
+            model=effective_model,
         )
 
     def cleanup(self, skill_node_id: str) -> None:

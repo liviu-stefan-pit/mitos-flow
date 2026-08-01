@@ -9,8 +9,14 @@ import type { SkillNodeData } from "../nodeData";
 export type { SkillNodeData };
 
 export function SkillNode({ data }: NodeProps) {
-  const { label, runner } = data as SkillNodeData;
+  const { label, runner, model } = data as SkillNodeData;
   const runnerKind = runner === "cursor" ? "cursor" : "fake";
+  const modelId =
+    runnerKind === "cursor" &&
+    typeof model === "string" &&
+    model.trim().length > 0
+      ? model.trim()
+      : null;
 
   return (
     <div className="graph-node graph-node-skill" data-testid="node-skill">
@@ -36,6 +42,11 @@ export function SkillNode({ data }: NodeProps) {
       >
         {runnerKind === "cursor" ? "Cursor" : "Fake"}
       </div>
+      {modelId ? (
+        <div className="graph-node-model" data-testid="node-skill-model">
+          {modelId}
+        </div>
+      ) : null}
       <Handle
         type="source"
         position={Position.Right}

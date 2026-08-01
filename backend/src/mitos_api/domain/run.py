@@ -110,6 +110,8 @@ class NodeRunResult(BaseModel):
     exitCode: int | None = None
     elapsedMs: int | None = None
     usage: RunnerUsage | None = None
+    # Phase 24.5 — model used for this Cursor Skill
+    model: str | None = None
 
 
 class RunEvent(BaseModel):
@@ -135,6 +137,7 @@ class RunEvent(BaseModel):
     exitCode: int | None = None
     elapsedMs: int | None = None
     usage: RunnerUsage | None = None
+    model: str | None = None
     timestamp: str
 
 

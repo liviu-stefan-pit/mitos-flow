@@ -2,7 +2,7 @@
 
 > Frozen contracts for v1. Created in Phase 0. Do not change without updating MASTER-PLAN.md.
 
-**Last updated:** 2026-07-26
+**Last updated:** 2026-08-01
 
 ---
 
@@ -117,13 +117,15 @@ One **Artifact Output** node replaces separate Save and Output nodes.
 2. Workflow Service validates the graph (DAG, no dangling edges, valid edge kinds).
 3. Deterministic DAG scheduler topologically orders nodes.
 4. Scheduler dispatches each Skill to its configured runner (per-node Fake or Cursor; Phase 24).
-5. Events stream to the UI via SSE (`queued` → `running` → `completed` / `failed`).
-6. Artifact Output nodes write results to the artifact store or pass-through preview.
+5. Cursor Skills always receive an explicit `--model` (per-Skill preferred model, default `composer-2.5`; Phase 24.5).
+6. Events stream to the UI via SSE (`queued` → `running` → `completed` / `failed`).
+7. Artifact Output nodes write results to the artifact store or pass-through preview.
 
 ### Runner strategy
 
 1. **Fake runner** (Phases 11–16): Deterministic, no external dependencies. Returns predictable output for testing.
 2. **Cursor CLI adapter** (Phases 21–24): Spawns Cursor CLI with built command; captures stdout/stderr/exit/usage.
+3. **Per-Skill models** (Phase 24.5): Each Cursor Skill picks a model from `agent --list-models` (excludes `auto`); default is `composer-2.5`.
 
 ---
 
@@ -139,6 +141,7 @@ One **Artifact Output** node replaces separate Save and Output nodes.
 | `/api/runs/{id}/cancel` | 16 | POST | Cancel an in-flight run |
 | `/api/cursor/capability` | 21 | GET | Cursor CLI capability probe |
 | `/api/cursor/dry-run` | 22 | POST | Build redacted Cursor command preview (no spawn) |
+| `/api/cursor/models` | 24.5 | GET | List Cursor models (`agent --list-models`); default `composer-2.5` |
 | `/api/runs` | 23–24 | POST | Cursor via `options.runner=cursor` (whole-run) or per-Skill `settings.runner=cursor` |
 
 ---

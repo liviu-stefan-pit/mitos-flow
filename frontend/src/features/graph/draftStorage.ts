@@ -2,6 +2,7 @@ import type { Edge, Node } from "@xyflow/react";
 import {
   defaultNodeData,
   isArtifactOutputMode,
+  DEFAULT_CURSOR_SKILL_MODEL,
   type MitosNodeData,
 } from "./nodeData";
 import {
@@ -92,6 +93,10 @@ function normalizeNodeData(
           record.runner === "cursor" || record.runner === "fake"
             ? record.runner
             : "fake",
+        model:
+          typeof record.model === "string" && record.model.trim().length > 0
+            ? record.model.trim()
+            : DEFAULT_CURSOR_SKILL_MODEL,
       };
     case "knowledgeBase":
       return {

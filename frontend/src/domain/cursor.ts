@@ -6,6 +6,8 @@ export type CursorCapabilityStatus =
   | "unsupported_version"
   | "error";
 
+export type CursorModelsStatus = "available" | "absent" | "error";
+
 export interface CursorFeatureFlags {
   printMode: boolean;
   outputFormat: boolean;
@@ -27,6 +29,19 @@ export interface CursorCapabilityReport {
   minimumVersion: string;
   helpExcerpt: string | null;
   features: CursorFeatureFlags;
+}
+
+export interface CursorModelInfo {
+  id: string;
+  label: string;
+}
+
+export interface CursorModelsReport {
+  status: CursorModelsStatus;
+  models: CursorModelInfo[];
+  defaultModel: string;
+  message?: string | null;
+  executable?: string | null;
 }
 
 export interface CursorSkillPayload {

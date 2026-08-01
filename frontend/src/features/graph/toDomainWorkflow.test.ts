@@ -109,6 +109,7 @@ describe("uiGraphToDomainWorkflow", () => {
       description: "Draft launch notes",
       joinPolicy: "wait_for_all",
       runner: "fake",
+      model: "composer-2.5",
     });
     expect(byId["kb-1"].settings).toEqual({
       description: "Product handbook",

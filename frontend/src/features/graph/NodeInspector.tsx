@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import type { Edge, Node } from "@xyflow/react";
 import type { LibraryAssetSummary } from "../../domain/library";
+import type { CursorModelInfo } from "../../domain/cursor";
 import {
+  DEFAULT_CURSOR_SKILL_MODEL,
   DEFAULT_KB_THRESHOLD,
   DEFAULT_KB_TOP_K,
 } from "../../domain/workflow";
@@ -10,6 +12,10 @@ import {
   LibraryApiError,
   listLibraryAssets,
 } from "../library/libraryApi";
+import {
+  CursorApiError,
+  fetchCursorModels,
+} from "../settings/cursorApi";
 import {
   ARTIFACT_OUTPUT_MODES,
   isArtifactOutputMode,
@@ -186,6 +192,63 @@ function SkillFields({
   onPatch: (patch: Partial<SkillNodeData>) => void;
   onUpdateEdgeData: (edgeId: string, patch: Record<string, unknown>) => void;
 }) {
+  const runnerKind = data.runner === "cursor" ? "cursor" : "fake";
+  const [models, setModels] = useState<CursorModelInfo[]>([
+    { id: DEFAULT_CURSOR_SKILL_MODEL, label: DEFAULT_CURSOR_SKILL_MODEL },
+  ]);
+  const [modelsMessage, setModelsMessage] = useState<string | null>(null);
+  const [modelsStatus, setModelsStatus] = useState<string>("available");
+
+  useEffect(() => {
+    if (runnerKind !== "cursor") return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const report = await fetchCursorModels();
+        if (cancelled) return;
+        setModels(
+          report.models.length > 0
+            ? report.models
+            : [
+                {
+                  id: report.defaultModel || DEFAULT_CURSOR_SKILL_MODEL,
+                  label: report.defaultModel || DEFAULT_CURSOR_SKILL_MODEL,
+                },
+              ],
+        );
+        setModelsStatus(report.status);
+        setModelsMessage(
+          report.status === "available"
+            ? null
+            : report.message ||
+                "Could not refresh Cursor models; using composer-2.5 default.",
+        );
+      } catch (err) {
+        if (cancelled) return;
+        setModels([
+          {
+            id: DEFAULT_CURSOR_SKILL_MODEL,
+            label: DEFAULT_CURSOR_SKILL_MODEL,
+          },
+        ]);
+        setModelsStatus("error");
+        setModelsMessage(
+          err instanceof CursorApiError
+            ? err.message
+            : "Could not load Cursor models; using composer-2.5 default.",
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [runnerKind, skillNodeId]);
+
+  const selectedModel =
+    typeof data.model === "string" && data.model.trim().length > 0
+      ? data.model.trim()
+      : DEFAULT_CURSOR_SKILL_MODEL;
+
   const kbAttachments = edges
     .filter(
       (edge) =>
@@ -261,7 +324,7 @@ function SkillFields({
               type="radio"
               name={`runner-${skillNodeId}`}
               value="fake"
-              checked={(data.runner ?? "fake") === "fake"}
+              checked={runnerKind === "fake"}
               onChange={() => onPatch({ runner: "fake" })}
               data-testid="inspector-runner-fake"
             />
@@ -272,14 +335,57 @@ function SkillFields({
               type="radio"
               name={`runner-${skillNodeId}`}
               value="cursor"
-              checked={data.runner === "cursor"}
-              onChange={() => onPatch({ runner: "cursor" })}
+              checked={runnerKind === "cursor"}
+              onChange={() =>
+                onPatch({
+                  runner: "cursor",
+                  model:
+                    typeof data.model === "string" && data.model.trim()
+                      ? data.model.trim()
+                      : DEFAULT_CURSOR_SKILL_MODEL,
+                })
+              }
               data-testid="inspector-runner-cursor"
             />
             Cursor
           </label>
         </div>
       </div>
+      {runnerKind === "cursor" ? (
+        <label className="node-inspector-field">
+          <span>Cursor model</span>
+          <select
+            data-testid="inspector-cursor-model"
+            value={selectedModel}
+            onChange={(event) => onPatch({ model: event.target.value })}
+          >
+            {!models.some((m) => m.id === selectedModel) ? (
+              <option value={selectedModel}>{selectedModel}</option>
+            ) : null}
+            {models.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.label === model.id
+                  ? model.id
+                  : `${model.label} (${model.id})`}
+              </option>
+            ))}
+          </select>
+          {modelsMessage ? (
+            <p
+              className="node-inspector-hint"
+              role="status"
+              data-testid="inspector-cursor-model-warning"
+              data-models-status={modelsStatus}
+            >
+              {modelsMessage}
+            </p>
+          ) : (
+            <p className="node-inspector-hint">
+              Default is {DEFAULT_CURSOR_SKILL_MODEL} (never silent auto).
+            </p>
+          )}
+        </label>
+      ) : null}
       <div className="node-inspector-field">
         <span>Join policy</span>
         <div

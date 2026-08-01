@@ -42,7 +42,12 @@ export type SkillNodeSettings = {
   joinPolicy: JoinPolicy;
   /** Phase 24: per-Skill Fake or Cursor runner. */
   runner?: "fake" | "cursor";
+  /** Phase 24.5: preferred Cursor model (default composer-2.5). */
+  model?: string | null;
 };
+
+/** Phase 24.5: cheapest Composer — never fall through to CLI ``auto``. */
+export const DEFAULT_CURSOR_SKILL_MODEL = "composer-2.5";
 
 export type KnowledgeBaseNodeSettings = {
   description: string;
@@ -145,7 +150,12 @@ export function defaultSettingsForKind(kind: NodeKind): NodeSettings {
     case "input":
       return { mediaType: "text/plain", content: "" };
     case "skill":
-      return { description: "", joinPolicy: "wait_for_all", runner: "fake" };
+      return {
+        description: "",
+        joinPolicy: "wait_for_all",
+        runner: "fake",
+        model: DEFAULT_CURSOR_SKILL_MODEL,
+      };
     case "knowledgeBase":
       return { description: "", content: "", libraryAssetId: null };
     case "rules":

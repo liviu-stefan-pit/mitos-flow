@@ -11,6 +11,7 @@ from mitos_api.domain import (
     CursorCapabilityReport,
     CursorDryRunRequest,
     CursorDryRunResponse,
+    CursorModelsReport,
     LibraryAsset,
     LibraryBatchImportRequest,
     LibraryBatchImportResponse,
@@ -26,7 +27,11 @@ from mitos_api.domain import (
     validate_workflow,
 )
 from mitos_api.services import cancel_run, get_run, run_store, start_run
-from mitos_api.services.cursor import dry_run_cursor_command, get_cursor_capability
+from mitos_api.services.cursor import (
+    dry_run_cursor_command,
+    get_cursor_capability,
+    get_cursor_models,
+)
 from mitos_api.services.library import (
     confirm_import,
     get_library_asset,
@@ -65,6 +70,17 @@ def cursor_capability() -> CursorCapabilityReport:
     and reports discovered features from help text.
     """
     return get_cursor_capability()
+
+
+@app.get("/api/cursor/models", response_model=CursorModelsReport)
+def cursor_models() -> CursorModelsReport:
+    """
+    List Cursor CLI models via ``agent --list-models`` (Phase 24.5).
+
+    Filters out ``auto``. Always includes default ``composer-2.5``.
+    Never runs user prompts.
+    """
+    return get_cursor_models()
 
 
 @app.post("/api/cursor/dry-run", response_model=CursorDryRunResponse)

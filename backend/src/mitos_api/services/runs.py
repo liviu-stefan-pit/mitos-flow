@@ -25,6 +25,7 @@ from mitos_api.domain.workflow import (
     AttachedKnowledgeBase,
     AttachedRule,
     CitedChunk,
+    DEFAULT_CURSOR_SKILL_MODEL,
     InputNodeSettings,
     NodeKind,
     SkillNodeSettings,
@@ -101,6 +102,29 @@ def _workflow_needs_cursor(workflow: Workflow, options: RunOptions) -> bool:
         ):
             return True
     return False
+
+
+def _resolve_skill_model(
+    skill_node: WorkflowNode,
+    options: RunOptions,
+) -> str:
+    """
+    Resolve the Cursor model for one Skill (Phase 24.5).
+
+    Skill ``settings.model`` wins; then run-level ``options.cursor.model``;
+    finally ``composer-2.5``. Never returns empty.
+    """
+    settings = skill_node.settings
+    if isinstance(settings, SkillNodeSettings):
+        skill_model = (settings.model or "").strip()
+        if skill_model:
+            return skill_model
+    cursor_opts = options.cursor
+    if cursor_opts is not None:
+        run_model = (cursor_opts.model or "").strip()
+        if run_model:
+            return run_model
+    return DEFAULT_CURSOR_SKILL_MODEL
 
 
 def _execute_skill_with_timeout(
@@ -194,6 +218,7 @@ def execute_run(
         exit_code: int | None = None,
         elapsed_ms: int | None = None,
         usage: RunnerUsage | None = None,
+        model: str | None = None,
     ) -> None:
         if on_event is not None:
             on_event(
@@ -212,6 +237,7 @@ def execute_run(
                 exit_code=exit_code,
                 elapsed_ms=elapsed_ms,
                 usage=usage,
+                model=model,
             )
 
     validation = validate_workflow(workflow)
@@ -599,6 +625,20 @@ def execute_run(
             )
 
         primary = envelopes[0]
+        runner_kind = (
+            _skill_runner_kind(skill_node, opts)
+            if forced_runner is None
+            else (
+                "cursor"
+                if isinstance(active_runner, CursorRunner)
+                else opts.runner
+            )
+        )
+        skill_model = (
+            _resolve_skill_model(skill_node, opts)
+            if runner_kind == "cursor" or isinstance(active_runner, CursorRunner)
+            else None
+        )
         try:
             skill_result = _execute_skill_with_timeout(
                 active_runner,
@@ -611,6 +651,7 @@ def execute_run(
                     inputs=envelopes,
                     rules=attached_rules,
                     knowledgeChunks=knowledge_chunks,
+                    model=skill_model,
                 ),
                 timeout_ms=opts.nodeTimeoutMs,
             )
@@ -706,6 +747,9 @@ def execute_run(
             message_parts.append(f"elapsed {skill_result.elapsedMs}ms")
         if skill_result.exitCode is not None:
             message_parts.append(f"exit {skill_result.exitCode}")
+        resolved_model = skill_result.model or skill_model
+        if resolved_model:
+            message_parts.append(f"model {resolved_model}")
         if skill_result.usage is not None:
             usage = skill_result.usage
             token_bits: list[str] = []
@@ -732,6 +776,7 @@ def execute_run(
                 exitCode=skill_result.exitCode,
                 elapsedMs=skill_result.elapsedMs,
                 usage=skill_result.usage,
+                model=resolved_model,
             )
         )
         completed_outputs[skill_node.id] = (payload, media_type)
@@ -751,6 +796,7 @@ def execute_run(
             exit_code=skill_result.exitCode,
             elapsed_ms=skill_result.elapsedMs,
             usage=skill_result.usage,
+            model=resolved_model,
         )
 
     if cancel_check():

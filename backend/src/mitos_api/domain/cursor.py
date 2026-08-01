@@ -1,4 +1,4 @@
-"""Cursor CLI capability probe, dry-run, and execute models (Phases 21–23)."""
+"""Cursor CLI capability probe, dry-run, execute, and models (Phases 21–24.5)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,12 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from mitos_api.domain.workflow import AttachedRule, CitedChunk, InputEnvelope
+from mitos_api.domain.workflow import (
+    AttachedRule,
+    CitedChunk,
+    DEFAULT_CURSOR_SKILL_MODEL,
+    InputEnvelope,
+)
 
 DEFAULT_CURSOR_TIMEOUT_MS = 120_000
 
@@ -17,6 +22,14 @@ class CursorCapabilityStatus(str, Enum):
     ABSENT = "absent"
     AVAILABLE = "available"
     UNSUPPORTED_VERSION = "unsupported_version"
+    ERROR = "error"
+
+
+class CursorModelsStatus(str, Enum):
+    """Result of ``agent --list-models`` (Phase 24.5)."""
+
+    AVAILABLE = "available"
+    ABSENT = "absent"
     ERROR = "error"
 
 
@@ -67,6 +80,33 @@ class CursorCapabilityReport(BaseModel):
     features: CursorFeatureFlags = Field(default_factory=CursorFeatureFlags)
 
 
+class CursorModelInfo(BaseModel):
+    """One model from ``agent --list-models`` (Phase 24.5)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+
+
+class CursorModelsReport(BaseModel):
+    """
+    Live model catalog for the Skill inspector (Phase 24.5).
+
+    ``auto`` is never included. ``defaultModel`` is always ``composer-2.5``.
+    When the CLI is absent or listing fails, ``models`` still contains at least
+    the default so the inspector stays editable.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: CursorModelsStatus
+    models: list[CursorModelInfo] = Field(default_factory=list)
+    defaultModel: str = DEFAULT_CURSOR_SKILL_MODEL
+    message: str | None = None
+    executable: str | None = None
+
+
 class CursorSkillPayload(BaseModel):
     """
     Skill execution fields used for Cursor command building (Phase 22).
@@ -109,6 +149,8 @@ class CursorRunOptions(BaseModel):
     Options for spawning Cursor as the Skill runner (Phase 23).
 
     ``confirmed`` must be true before a real spawn (Phase 22 preview gate).
+    ``model`` is a run-level fallback; per-Skill ``settings.model`` wins
+    (Phase 24.5).
     """
 
     model_config = ConfigDict(extra="forbid")
