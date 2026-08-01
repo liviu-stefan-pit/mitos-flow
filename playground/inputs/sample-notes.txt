@@ -5,5 +5,7 @@ Notes:
 - Fake runner first, Cursor CLI later
 - Import skills/rules into a managed library (no raw path access)
 - Demo should show Input → Draft → Polish → Output
+- Later demos: two-input join, KB top-K, Cursor smoke, selector JSON
 Open questions:
 - When do we attach rules to skills in the UI?
+- Which Skills should use Fake vs Cursor in a mixed chain?

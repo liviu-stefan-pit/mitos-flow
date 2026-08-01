@@ -1,0 +1,8 @@
+Cursor smoke task (keep tiny — real tokens)
+
+Summarize what Mitos Flow Phase 23 should prove in one short paragraph of notes:
+
+- One Input → one Skill → one pass-through Artifact Output
+- Skill runner = Cursor CLI (not fake)
+- Capture stdout, stderr, exit status, elapsed time
+- Do not edit the repo; reply only

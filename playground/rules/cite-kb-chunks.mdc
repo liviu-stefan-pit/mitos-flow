@@ -1,0 +1,10 @@
+---
+description: When KB chunks are attached, cite them by chunk id or heading
+alwaysApply: false
+---
+
+# Cite KB chunks
+
+- If knowledge-base chunks are present in the run, reference them by citation or chunk id.
+- Prefer quoting short phrases over paraphrasing when the exact wording matters.
+- If no KB chunk answers the question, say so instead of guessing.

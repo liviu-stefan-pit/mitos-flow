@@ -1,0 +1,17 @@
+{
+  "runId": "demo-run-001",
+  "status": "completed",
+  "output": {
+    "title": "Phase 26 selector fixture",
+    "headline": "Extract me with JSONPath",
+    "metrics": {
+      "skillsExecuted": 1,
+      "tokens": null
+    },
+    "artifacts": [
+      { "name": "preview", "bytes": 128 },
+      { "name": "saved", "bytes": 128 }
+    ]
+  },
+  "warnings": []
+}

@@ -1,0 +1,25 @@
+{
+  "goal": "Ship a Cursor dry-run preview before real CLI spawn",
+  "audience": "engineers validating Phase 22-23",
+  "constraints": [
+    "No user prompts during capability probe",
+    "Redact secrets in command preview",
+    "Stay inside workspace boundary"
+  ],
+  "openQuestions": [
+    "Which print/output-format flags does this CLI build advertise?",
+    "What timeout should the first smoke run use?"
+  ],
+  "sections": {
+    "summary": "Phase 22 builds argv+stdin without spawning. Phase 23 spawns once for Input→Skill→Output and captures stdout/stderr/exit.",
+    "nextSteps": [
+      "Import cursor-smoke skill and safety rule",
+      "Preview redacted command",
+      "Run one real Cursor Skill with a tiny input"
+    ]
+  },
+  "meta": {
+    "fixture": true,
+    "phaseHints": ["26-selector", "27-prompted", "28-usage"]
+  }
+}

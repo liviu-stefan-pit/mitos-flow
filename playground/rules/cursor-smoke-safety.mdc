@@ -1,0 +1,10 @@
+---
+description: Prefer ask/plan-safe behavior for Cursor smoke runs
+alwaysApply: false
+---
+
+# Cursor smoke safety
+
+- For playground Cursor smoke runs, stay read-only: summarize and advise only.
+- Do not create, edit, or delete files unless the user explicitly asks outside this rule.
+- Do not run destructive shell commands.

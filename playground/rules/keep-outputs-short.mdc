@@ -1,0 +1,10 @@
+---
+description: Keep skill outputs short enough to scan in the Activity timeline
+alwaysApply: true
+---
+
+# Keep outputs short
+
+- Prefer under 150 words unless the skill explicitly asks for JSON or a longer brief.
+- Lead with the main ask or result in the first line.
+- Avoid filler ("In conclusion", "As an AI").

@@ -1,0 +1,10 @@
+Project: Mitos Flow join demo — brief port
+Audience: eng manager reviewing a two-input Skill
+Ask:
+- Combine this brief with the attached context notes
+- Call out conflicts instead of inventing a compromise
+Constraints:
+- Stay under one page
+- No new metrics
+Open questions:
+- Should Cursor run on merge only, or on both Skills in the chain?

@@ -1,0 +1,11 @@
+---
+description: Emit raw JSON only when the skill asks for structured output
+globs: "**/*.{json,md,mdc}"
+alwaysApply: false
+---
+
+# JSON only when asked
+
+- When a skill requests JSON, emit a single JSON value with no markdown fences.
+- Do not wrap JSON in commentary before or after the object.
+- When a skill does not request JSON, use readable Markdown headings instead.

@@ -1,0 +1,19 @@
+Mitos Flow FAQ (playground KB, plain text)
+
+Q: What runners exist in v1?
+A: Fake deterministic runner first. Cursor CLI adapter in Phases 21-24. Per-node runner choice comes in Phase 24.
+
+Q: Can I attach multiple rules to one skill?
+A: Yes. Rules are many-to-many. Duplicate edges to the same Rules node are collapsed. Order follows Rules node id.
+
+Q: Does KB retrieval use embeddings?
+A: Not in v1. Retrieval is keyword overlap with top-K and threshold controls per attachment.
+
+Q: Where do imported files live?
+A: Inside the managed library root (MITOS_LIBRARY_ROOT). The app does not read arbitrary filesystem paths for skills/rules/KB.
+
+Q: What happens if I cancel a run?
+A: The scheduler stops before the next Skill/Output starts. Downstream nodes stay cancelled/skipped. Cleanup hooks still run.
+
+Q: How do I preview a Cursor command before spending tokens?
+A: Phase 22 adds a dry-run command builder with redaction and confirmation. Phase 21 only probes CLI availability.

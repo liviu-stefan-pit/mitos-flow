@@ -1,0 +1,14 @@
+Context notes for the merge-brief-context Skill (context port)
+
+Glossary reminders:
+- Fake runner = deterministic local stub, no tokens
+- Cursor adapter = real CLI spawn after dry-run preview
+- wait_for_all = Skill blocked until every named input port is ready
+
+Team notes:
+- Prefer managed library imports over raw paths
+- Activity timeline is the source of truth for attached rules/KB
+- Settings → Cursor CLI status must be Available before smoke runs
+
+Conflicts with some older docs:
+- Older notes said "Save" and "Output" were separate nodes; v1 uses Artifact Output only
