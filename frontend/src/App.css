@@ -27,6 +27,38 @@
   flex-shrink: 0;
 }
 
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.app-nav {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.app-nav-button {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #445;
+  cursor: pointer;
+}
+
+.app-nav-button:hover {
+  background: #f0f2f7;
+}
+
+.app-nav-button.active {
+  background: #e8eef8;
+  border-color: #c5d0e6;
+  color: #16213e;
+  font-weight: 600;
+}
+
 .app-title {
   font-size: 1.25rem;
   font-weight: 600;

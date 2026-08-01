@@ -1,5 +1,10 @@
 """Shared workflow domain models and validation (Phase 9+)."""
 
+from mitos_api.domain.cursor import (
+    CursorCapabilityReport,
+    CursorCapabilityStatus,
+    CursorFeatureFlags,
+)
 from mitos_api.domain.library import (
     AssetKind,
     LibraryAsset,
@@ -61,6 +66,9 @@ __all__ = [
     "AttachedRule",
     "CancelRunResponse",
     "CitedChunk",
+    "CursorCapabilityReport",
+    "CursorCapabilityStatus",
+    "CursorFeatureFlags",
     "EdgeKind",
     "InputEnvelope",
     "InputNodeSettings",

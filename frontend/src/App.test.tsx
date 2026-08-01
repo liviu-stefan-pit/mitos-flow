@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { App } from "./App";
 
@@ -24,8 +24,21 @@ vi.mock("./features/library/libraryApi", () => ({
   },
 }));
 
+vi.mock("./features/settings/cursorApi", () => ({
+  fetchCursorCapability: vi.fn().mockReturnValue(new Promise(() => {})),
+  CursorApiError: class CursorApiError extends Error {
+    status?: number;
+    constructor(message: string, status?: number) {
+      super(message);
+      this.name = "CursorApiError";
+      this.status = status;
+    }
+  },
+}));
+
 import { checkBackendHealth } from "./features/health/healthApi";
 import * as libraryApi from "./features/library/libraryApi";
+import * as cursorApi from "./features/settings/cursorApi";
 
 const mockedCheck = vi.mocked(checkBackendHealth);
 
@@ -59,6 +72,9 @@ describe("App", () => {
   beforeEach(() => {
     mockedCheck.mockReset();
     vi.mocked(libraryApi.listLibraryAssets).mockReturnValue(new Promise(() => {}));
+    vi.mocked(cursorApi.fetchCursorCapability).mockReturnValue(
+      new Promise(() => {}),
+    );
   });
 
   it("renders the Mitos Flow header", () => {
@@ -95,5 +111,40 @@ describe("App", () => {
     expect(screen.getByTestId("workflow-canvas")).toBeInTheDocument();
     expect(screen.getByTestId("node-palette")).toBeInTheDocument();
     expect(screen.queryByTestId("node-input")).not.toBeInTheDocument();
+  });
+
+  it("opens Settings and shows Cursor CLI status", async () => {
+    mockedCheck.mockResolvedValue(true);
+    vi.mocked(cursorApi.fetchCursorCapability).mockResolvedValue({
+      status: "available",
+      message: "Cursor CLI available (version 1.2.3).",
+      executable: "/usr/bin/agent",
+      version: "1.2.3",
+      versionRaw: "1.2.3",
+      minimumVersion: "0.1.0",
+      helpExcerpt: "--print",
+      features: {
+        printMode: true,
+        outputFormat: false,
+        workspace: false,
+        force: false,
+        model: false,
+        listModels: false,
+        trust: false,
+        apiKey: false,
+        streamPartialOutput: false,
+      },
+    });
+
+    render(<App />);
+    fireEvent.click(screen.getByTestId("nav-settings"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("settings-page")).toBeInTheDocument();
+      expect(screen.getByTestId("cursor-cli-status")).toBeInTheDocument();
+      expect(screen.getByTestId("cursor-cli-status-value")).toHaveTextContent(
+        "Available",
+      );
+    });
   });
 });

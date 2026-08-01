@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse
 
 from mitos_api.domain import (
     CancelRunResponse,
+    CursorCapabilityReport,
     LibraryAsset,
     LibraryBatchImportRequest,
     LibraryBatchImportResponse,
@@ -23,6 +24,7 @@ from mitos_api.domain import (
     validate_workflow,
 )
 from mitos_api.services import cancel_run, get_run, run_store, start_run
+from mitos_api.services.cursor import get_cursor_capability
 from mitos_api.services.library import (
     confirm_import,
     get_library_asset,
@@ -50,6 +52,17 @@ app.add_middleware(
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/cursor/capability", response_model=CursorCapabilityReport)
+def cursor_capability() -> CursorCapabilityReport:
+    """
+    Read-only Cursor CLI capability probe (Phase 21).
+
+    Locates the CLI, runs ``--version`` / ``--help`` only (no user prompts),
+    and reports discovered features from help text.
+    """
+    return get_cursor_capability()
 
 
 @app.post("/api/workflows/validate", response_model=WorkflowValidationResult)

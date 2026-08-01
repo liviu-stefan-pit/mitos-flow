@@ -3,7 +3,7 @@
 > Running log of completed work. Update after each phase.
 
 **Last updated:** 2026-08-01  
-**Current phase:** 21 (next)
+**Current phase:** 22 (next)
 
 ---
 
@@ -33,6 +33,7 @@
 | 19 | 2026-08-01 | Basic KB resources: import, attach, keyword retrieval + citations |
 | 20 | 2026-08-01 | KB retrieval controls: per-attachment top-K/threshold + query in trace |
 | 20.5 | 2026-08-01 | Fake-run regression harness: API workflow stories + Playwright smoke |
+| 21 | 2026-08-01 | Cursor CLI capability probe + Settings page |
 
 ---
 
@@ -337,6 +338,22 @@
 
 ---
 
+### Phase 21 — Cursor capability probe
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- Read-only probe service (`services/cursor/probe.py`): locate `agent` / `cursor-agent` (or `MITOS_CURSOR_CLI` / `CURSOR_CLI_PATH`), run `--version` + `--help` only — no user prompts
+- Feature flags discovered from help text markers only (no concept-doc assumptions)
+- Statuses: `absent` / `available` / `unsupported_version` / `error`; minimum version floor `0.1.0`
+- `GET /api/cursor/capability` returns `CursorCapabilityReport`
+- Settings page (header nav): shows status, version, executable, message, help-discovered features; Refresh re-probes
+- Gate tests: absent / available / unsupported-version (unit + API); Settings + App UI coverage
+- Backend tests: 108 passing (11 new in `test_cursor_capability.py`); frontend: 74 passing; `tsc -b --noEmit` clean
+- **Manual check:** Open Settings → Cursor CLI status section shows probe result
+
+---
+
 ## Known issues
 
 _None._
@@ -345,4 +362,4 @@ _None._
 
 ## Next up
 
-- Phase 21: Cursor capability probe
+- Phase 22: Cursor command builder and dry run
