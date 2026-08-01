@@ -1,2 +1,5 @@
 node_modules/
 .mitos-flow-library/
+test-results/
+playwright-report/
+e2e/_debug-screenshot.png

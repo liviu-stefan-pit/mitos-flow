@@ -32,6 +32,7 @@
 | 18 | 2026-08-01 | Attach Rules to Skills (many-to-many, ordered, traced) |
 | 19 | 2026-08-01 | Basic KB resources: import, attach, keyword retrieval + citations |
 | 20 | 2026-08-01 | KB retrieval controls: per-attachment top-K/threshold + query in trace |
+| 20.5 | 2026-08-01 | Fake-run regression harness: API workflow stories + Playwright smoke |
 
 ---
 
@@ -317,6 +318,22 @@
 - Gate fixtures/tests: `kb_retrieval_controls`, `kb_per_attachment_topk`, threshold filter, query-in-trace
 - Backend tests: 94 passing (6 new in `test_kb_retrieval_controls.py`); frontend: 67 passing; `tsc -b --noEmit` clean
 - **Manual check:** Attach KB to Skill; lower top-K in Skill inspector; run; Activity shows fewer cited chunks
+
+---
+
+### Phase 20.5 — Fake-run regression harness
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- API stories in `backend/tests/test_fake_run_story.py`: golden playground import→attach→run→trace; cancel mid-chain; Draft→Polish nested `fake::` composition
+- Playwright scaffold at repo-root `e2e/` (Chromium only): `fake-run-golden.spec.ts`, `cancel-mid-run.spec.ts`
+- Isolated library root via `MITOS_LIBRARY_ROOT` + `npm run dev:e2e` (uvicorn without `--reload` so Windows env override sticks)
+- Graph topology seeded via localStorage draft in E2E (avoids flaky drag/connect under UI overlays); Asset library import still exercised through the UI
+- Root scripts: `test:e2e`, `test:regression` (unit suite stays separate from browsers)
+- Phase 31 will extend this harness (export/import + Cursor stub), not invent E2E from scratch
+- Backend tests: 97 passing; `npm run test:e2e` green on Windows Chromium
+- **Manual check:** `npx playwright install chromium` → `npm run test:e2e` green
 
 ---
 

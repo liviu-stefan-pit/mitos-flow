@@ -6,12 +6,18 @@
     "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && uvicorn mitos_api.main:app --reload --port 8000",
     "dev:frontend": "cd frontend && npm run dev",
+    "dev:e2e": "concurrently -n backend,frontend -c blue,green \"npm run dev:backend:e2e\" \"npm run dev:frontend\"",
+    "dev:backend:e2e": "cd backend && uvicorn mitos_api.main:app --port 8000",
     "test": "npm run test:backend && npm run test:frontend",
     "test:backend": "cd backend && pytest",
     "test:frontend": "cd frontend && npm run test",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
+    "test:regression": "npm test && npm run test:e2e",
     "install:all": "cd backend && pip install -e \".[dev]\" && cd ../frontend && npm install"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.1.2",
     "concurrently": "^9.1.2"
   }
 }

@@ -117,6 +117,7 @@ Rules:
 | Shared workflow model | 9–10 | [x] |
 | Deterministic execution | 11–16 | [x] |
 | Reusable local assets | 17–20 | [x] |
+| Regression harness | 20.5 | [x] |
 | Cursor CLI adapter | 21–24 | [ ] |
 | Artifact outputs & observability | 25–28 | [ ] |
 | Portability & hardening | 29–31 | [ ] |
@@ -267,6 +268,13 @@ Rules:
   - **Gate:** Changing one attachment's controls affects only that Skill/KB link
   - **Manual check:** Lower top-K; fewer chunks in trace
 
+- [x] **Phase 20.5 — Fake-run regression harness**
+  - API workflow stories: playground import → attach Rules/KB → fake run → SSE asserts
+  - Playwright smoke: golden UI story + cancel mid-run (Chromium)
+  - Scripts + README for local/CI use (`test:e2e`, `test:regression`)
+  - **Gate:** `npm test` (incl. API stories) and `npm run test:e2e` pass on Windows
+  - **Manual check:** Fresh clone → `npm run install:all` → `npx playwright install chromium` → `npm run test:e2e` green
+
 ---
 
 ### Cursor CLI adapter
@@ -339,9 +347,10 @@ Rules:
   - **Manual check:** Export embedded mode; verify bundle contents match preview
 
 - [ ] **Phase 31 — End-to-end regression suite**
-  - Playwright: import → graph → fake run → trace → output → export/import
-  - Cursor stubbed in CI; one documented manual Cursor smoke test
-  - **Gate:** Clean-clone setup; complete fake-run story passes on Windows
+  - Extends the Phase 20.5 harness (does not invent E2E from scratch)
+  - Playwright: export/import + fuller matrix; Cursor stubbed in CI
+  - One documented manual Cursor smoke test
+  - **Gate:** Clean-clone setup; complete fake-run + portability story passes on Windows
   - **Manual check:** Fresh clone → follow README → full fake flow works
 
 ---
@@ -435,6 +444,7 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 18 | 2026-08-01 | Rules→Skill many-to-many resolve; ordered rules in runner request + run trace |
 | 19 | 2026-08-01 | KB import (.txt/.md) + keyword retrieval with cited chunks; attachment isolation |
 | 20 | 2026-08-01 | Per-attachment KB top-K/threshold; query + chunk IDs + citations in run trace |
+| 20.5 | 2026-08-01 | Fake-run regression harness: API stories + slim Playwright (import/run/trace/cancel) |
 | 21 | | |
 | 22 | | |
 | 23 | | |
