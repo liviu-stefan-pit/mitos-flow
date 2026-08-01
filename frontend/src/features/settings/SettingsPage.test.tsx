@@ -1,10 +1,14 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CursorCapabilityReport } from "../../domain/cursor";
+import type {
+  CursorCapabilityReport,
+  CursorDryRunResponse,
+} from "../../domain/cursor";
 import { SettingsPage } from "./SettingsPage";
 
 vi.mock("./cursorApi", () => ({
   fetchCursorCapability: vi.fn(),
+  postCursorDryRun: vi.fn(),
   CursorApiError: class CursorApiError extends Error {
     status?: number;
     constructor(message: string, status?: number) {
@@ -15,9 +19,10 @@ vi.mock("./cursorApi", () => ({
   },
 }));
 
-import { fetchCursorCapability } from "./cursorApi";
+import { fetchCursorCapability, postCursorDryRun } from "./cursorApi";
 
 const mockedFetch = vi.mocked(fetchCursorCapability);
+const mockedDryRun = vi.mocked(postCursorDryRun);
 
 const availableReport: CursorCapabilityReport = {
   status: "available",
@@ -35,7 +40,7 @@ const availableReport: CursorCapabilityReport = {
     model: true,
     listModels: false,
     trust: true,
-    apiKey: false,
+    apiKey: true,
     streamPartialOutput: false,
   },
 };
@@ -61,9 +66,28 @@ const absentReport: CursorCapabilityReport = {
   },
 };
 
+const previewResponse: CursorDryRunResponse = {
+  ok: true,
+  errors: [],
+  confirmationRequired: true,
+  confirmed: false,
+  message: "Review the redacted command preview, then confirm before a real Cursor spawn (Phase 23).",
+  spawned: false,
+  preview: {
+    argv: ["C:\\tools\\agent.exe", "--print", "--api-key", "***"],
+    commandDisplay: '"C:\\tools\\agent.exe" --print --api-key ***',
+    stdin: "# Skill: cursor-smoke\n",
+    stdinPreview: "# Skill: cursor-smoke\n",
+    timeoutMs: 120000,
+    workspace: "C:\\prod\\mitos-flow",
+    executable: "C:\\tools\\agent.exe",
+  },
+};
+
 describe("SettingsPage", () => {
   beforeEach(() => {
     mockedFetch.mockReset();
+    mockedDryRun.mockReset();
   });
 
   it("shows available Cursor CLI status from the probe API", async () => {
@@ -138,5 +162,61 @@ describe("SettingsPage", () => {
       );
     });
     expect(mockedFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("previews a redacted Cursor command and allows confirmation", async () => {
+    mockedFetch.mockResolvedValue(availableReport);
+    mockedDryRun
+      .mockResolvedValueOnce(previewResponse)
+      .mockResolvedValueOnce({
+        ...previewResponse,
+        confirmed: true,
+        message:
+          "Command preview confirmed. Spawning is deferred to Phase 23 (dry-run only).",
+      });
+
+    render(<SettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("cursor-cli-status-value")).toHaveTextContent(
+        "Available",
+      );
+    });
+
+    fireEvent.change(screen.getByTestId("cursor-dry-run-api-key"), {
+      target: { value: "sk-secret-for-ui" },
+    });
+    fireEvent.click(screen.getByTestId("cursor-dry-run-preview"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cursor-dry-run-command")).toHaveTextContent(
+        "***",
+      );
+    });
+    expect(screen.getByTestId("cursor-dry-run-command")).not.toHaveTextContent(
+      "sk-secret-for-ui",
+    );
+    expect(screen.getByTestId("cursor-dry-run-spawned")).toHaveTextContent(
+      "no",
+    );
+    expect(mockedDryRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: expect.objectContaining({
+          apiKey: "sk-secret-for-ui",
+          confirmed: false,
+        }),
+      }),
+    );
+
+    fireEvent.click(screen.getByTestId("cursor-dry-run-confirm"));
+    await waitFor(() => {
+      expect(screen.getByTestId("cursor-dry-run-status")).toHaveTextContent(
+        "confirmed",
+      );
+    });
+    expect(mockedDryRun).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        options: expect.objectContaining({ confirmed: true }),
+      }),
+    );
   });
 });

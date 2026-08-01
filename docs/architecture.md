@@ -137,6 +137,8 @@ One **Artifact Output** node replaces separate Save and Output nodes.
 | `/api/runs/{id}` | 15 | GET | Run snapshot + event log |
 | `/api/runs/{id}/events` | 15 | GET (SSE) | Live run events |
 | `/api/runs/{id}/cancel` | 16 | POST | Cancel an in-flight run |
+| `/api/cursor/capability` | 21 | GET | Cursor CLI capability probe |
+| `/api/cursor/dry-run` | 22 | POST | Build redacted Cursor command preview (no spawn) |
 
 ---
 

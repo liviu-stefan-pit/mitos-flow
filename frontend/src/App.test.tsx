@@ -26,6 +26,7 @@ vi.mock("./features/library/libraryApi", () => ({
 
 vi.mock("./features/settings/cursorApi", () => ({
   fetchCursorCapability: vi.fn().mockReturnValue(new Promise(() => {})),
+  postCursorDryRun: vi.fn(),
   CursorApiError: class CursorApiError extends Error {
     status?: number;
     constructor(message: string, status?: number) {
@@ -142,6 +143,7 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByTestId("settings-page")).toBeInTheDocument();
       expect(screen.getByTestId("cursor-cli-status")).toBeInTheDocument();
+      expect(screen.getByTestId("cursor-dry-run")).toBeInTheDocument();
       expect(screen.getByTestId("cursor-cli-status-value")).toHaveTextContent(
         "Available",
       );

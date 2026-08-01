@@ -9,6 +9,8 @@ from fastapi.responses import StreamingResponse
 from mitos_api.domain import (
     CancelRunResponse,
     CursorCapabilityReport,
+    CursorDryRunRequest,
+    CursorDryRunResponse,
     LibraryAsset,
     LibraryBatchImportRequest,
     LibraryBatchImportResponse,
@@ -24,7 +26,7 @@ from mitos_api.domain import (
     validate_workflow,
 )
 from mitos_api.services import cancel_run, get_run, run_store, start_run
-from mitos_api.services.cursor import get_cursor_capability
+from mitos_api.services.cursor import dry_run_cursor_command, get_cursor_capability
 from mitos_api.services.library import (
     confirm_import,
     get_library_asset,
@@ -63,6 +65,17 @@ def cursor_capability() -> CursorCapabilityReport:
     and reports discovered features from help text.
     """
     return get_cursor_capability()
+
+
+@app.post("/api/cursor/dry-run", response_model=CursorDryRunResponse)
+def cursor_dry_run(body: CursorDryRunRequest) -> CursorDryRunResponse:
+    """
+    Build a Cursor CLI command preview from a Skill request (Phase 22).
+
+    Returns redacted argv + stdin and enforces workspace boundary checks.
+    Never spawns the CLI (``spawned`` is always false).
+    """
+    return dry_run_cursor_command(body)
 
 
 @app.post("/api/workflows/validate", response_model=WorkflowValidationResult)

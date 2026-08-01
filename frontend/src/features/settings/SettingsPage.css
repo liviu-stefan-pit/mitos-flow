@@ -16,6 +16,10 @@
   border-radius: 8px;
 }
 
+.settings-section-spaced {
+  margin-top: 1.25rem;
+}
+
 .settings-section-header {
   display: flex;
   align-items: flex-start;
@@ -177,6 +181,92 @@
   width: 1rem;
   text-align: center;
   font-weight: 700;
+}
+
+.dry-run-form {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.dry-run-field {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: #445;
+}
+
+.dry-run-field input {
+  padding: 0.4rem 0.55rem;
+  font-size: 0.9rem;
+  border: 1px solid #c5c9d4;
+  border-radius: 6px;
+  background: #fbfcfe;
+  color: #1a1a2e;
+}
+
+.dry-run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.settings-confirm {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.85rem;
+  border: 1px solid #2e7d32;
+  border-radius: 6px;
+  background: #e8f5e9;
+  color: #1b5e20;
+  cursor: pointer;
+}
+
+.settings-confirm:hover:not(:disabled) {
+  background: #dcedc8;
+}
+
+.settings-confirm:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.dry-run-preview {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eceef3;
+}
+
+.dry-run-status {
+  font-size: 0.85rem;
+  margin-bottom: 0.85rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 6px;
+}
+
+.dry-run-status.pending {
+  background: #fff8e1;
+  color: #6d4c00;
+}
+
+.dry-run-status.confirmed {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.dry-run-command,
+.dry-run-stdin {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #f4f6fa;
+  border: 1px solid #e2e6ef;
+  border-radius: 6px;
+  max-height: 14rem;
+  overflow: auto;
 }
 
 @media (max-width: 640px) {

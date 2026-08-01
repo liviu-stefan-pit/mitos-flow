@@ -3,7 +3,7 @@
 > Running log of completed work. Update after each phase.
 
 **Last updated:** 2026-08-01  
-**Current phase:** 22 (next)
+**Current phase:** 23 (next)
 
 ---
 
@@ -34,6 +34,7 @@
 | 20 | 2026-08-01 | KB retrieval controls: per-attachment top-K/threshold + query in trace |
 | 20.5 | 2026-08-01 | Fake-run regression harness: API workflow stories + Playwright smoke |
 | 21 | 2026-08-01 | Cursor CLI capability probe + Settings page |
+| 22 | 2026-08-01 | Cursor command builder + dry-run preview (no spawn) |
 
 ---
 
@@ -354,6 +355,24 @@
 
 ---
 
+### Phase 22 — Cursor command builder and dry run
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- Command builder (`services/cursor/command_builder.py`): Skill request → argv + stdin **without spawning**
+- Flags included only when advertised by the Phase 21 feature probe; prompt body on stdin (Windows cmdline length safety)
+- Workspace boundary via `MITOS_CURSOR_WORKSPACE_ROOT` (default: cwd); path traversal / outside-root rejected
+- Secret redaction for `--api-key` (value and `=` form); Windows quoting via `list2cmdline` / per-arg helper
+- Timeout carried on the built command / preview (`timeoutMs`, default 120000)
+- `POST /api/cursor/dry-run` returns redacted `commandDisplay` + stdin preview; `spawned` always false; confirmation gate
+- Settings: **Cursor command dry-run** section — Preview command → redacted display → Confirm preview
+- Gate tests: argument construction, Windows quoting, secret redaction, path checks (unit + API)
+- Backend tests: 124 passing (16 new in `test_cursor_dry_run.py`); frontend: 76 passing; `tsc -b --noEmit` clean
+- **Manual check:** Settings → enter optional API key → Preview command → confirm `***` redaction and Confirm preview
+
+---
+
 ## Known issues
 
 _None._
@@ -362,4 +381,4 @@ _None._
 
 ## Next up
 
-- Phase 22: Cursor command builder and dry run
+- Phase 23: Execute one Cursor Skill

@@ -3,7 +3,7 @@
 > **Purpose of this document:** Single source of truth for what Mitos Flow is, how it should be built, and which phase is done. Update checkboxes as phases complete. Point every implementation chat at this file first.
 
 **Last updated:** 2026-08-01  
-**Current phase:** 22 (next)  
+**Current phase:** 23 (next)  
 **Stack:** Local React/Vite frontend + FastAPI backend · Cursor CLI first · Fake runner before real CLI
 
 ---
@@ -285,7 +285,7 @@ Rules:
   - **Gate:** Absent/available/unsupported-version cases tested; UI displays result
   - **Manual check:** Settings page shows Cursor CLI status
 
-- [ ] **Phase 22 — Cursor command builder and dry run**
+- [x] **Phase 22 — Cursor command builder and dry run**
   - Adapter converts Skill execution request → argument array + stdin (no spawn)
   - Redacted command preview, workspace boundary checks, timeout, user confirmation
   - **Gate:** Argument construction, Windows quoting, secret redaction, path checks unit-tested
@@ -446,7 +446,7 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 20 | 2026-08-01 | Per-attachment KB top-K/threshold; query + chunk IDs + citations in run trace |
 | 20.5 | 2026-08-01 | Fake-run regression harness: API stories + slim Playwright (import/run/trace/cancel) |
 | 21 | 2026-08-01 | Cursor capability probe: GET /api/cursor/capability + Settings UI |
-| 22 | | |
+| 22 | 2026-08-01 | Cursor command builder + dry-run preview (no spawn); redaction + workspace checks |
 | 23 | | |
 | 24 | | |
 | 25 | | |

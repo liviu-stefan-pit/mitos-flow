@@ -1,7 +1,14 @@
 import { getApiUrl } from "../../lib/api";
-import type { CursorCapabilityReport } from "../../domain/cursor";
+import type {
+  CursorCapabilityReport,
+  CursorDryRunResponse,
+} from "../../domain/cursor";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CursorApiError, fetchCursorCapability } from "./cursorApi";
+import {
+  CursorApiError,
+  fetchCursorCapability,
+  postCursorDryRun,
+} from "./cursorApi";
 
 describe("cursorApi", () => {
   afterEach(() => {
@@ -48,5 +55,52 @@ describe("cursorApi", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
 
     await expect(fetchCursorCapability()).rejects.toBeInstanceOf(CursorApiError);
+  });
+
+  it("posts dry-run requests to /api/cursor/dry-run", async () => {
+    const response: CursorDryRunResponse = {
+      ok: true,
+      errors: [],
+      preview: {
+        argv: ["agent", "--print", "--api-key", "***"],
+        commandDisplay: "agent --print --api-key ***",
+        stdin: "# Skill: x\n",
+        stdinPreview: "# Skill: x\n",
+        timeoutMs: 120000,
+        workspace: "C:\\repo",
+        executable: "agent",
+      },
+      confirmationRequired: true,
+      confirmed: false,
+      message: "review",
+      spawned: false,
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => response,
+      }),
+    );
+
+    const result = await postCursorDryRun({
+      request: {
+        skillNodeId: "skill-1",
+        skillLabel: "x",
+        inputPayload: "y",
+      },
+      options: { apiKey: "sk-secret", confirmed: false },
+    });
+
+    expect(result).toEqual(response);
+    expect(fetch).toHaveBeenCalledWith(
+      `${getApiUrl()}/api/cursor/dry-run`,
+      expect.objectContaining({ method: "POST" }),
+    );
+    const init = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      options: { apiKey: "sk-secret", confirmed: false },
+    });
   });
 });
