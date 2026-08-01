@@ -2,6 +2,25 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from "vitest";
 import { WorkflowCanvas } from "./WorkflowCanvas";
 import { DRAFT_STORAGE_KEY, DRAFT_SCHEMA_VERSION } from "./draftStorage";
+import * as libraryApi from "../library/libraryApi";
+
+vi.mock("../library/libraryApi", () => ({
+  listLibraryAssets: vi.fn().mockReturnValue(new Promise(() => {})),
+  previewLibraryFile: vi.fn(),
+  importLibraryFile: vi.fn(),
+  importLibraryBatch: vi.fn(),
+  getLibraryAsset: vi.fn(),
+  isLibraryMarkdownFilename: (name: string) =>
+    /\.(md|mdc|markdown)$/i.test(name),
+  LibraryApiError: class LibraryApiError extends Error {
+    status?: number;
+    constructor(message: string, status?: number) {
+      super(message);
+      this.name = "LibraryApiError";
+      this.status = status;
+    }
+  },
+}));
 
 beforeAll(() => {
   class ResizeObserverMock {
@@ -31,6 +50,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   localStorage.clear();
+  vi.mocked(libraryApi.listLibraryAssets).mockReturnValue(new Promise(() => {}));
 });
 
 afterEach(() => {

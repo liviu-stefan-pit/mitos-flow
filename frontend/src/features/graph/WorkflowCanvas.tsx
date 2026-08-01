@@ -14,6 +14,7 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import type { WorkflowValidationResult } from "../../domain/workflow";
+import { AssetLibrary } from "../library/AssetLibrary";
 import { ActivityTimeline } from "../run/ActivityTimeline";
 import { useWorkflowRun } from "../run/useWorkflowRun";
 import {
@@ -45,7 +46,7 @@ const RESET_DRAFT_CONFIRM =
   "Reset the saved draft? The current canvas and browser draft will be cleared.";
 
 /**
- * Phase 7–16: inspector, draft, validate, live runs, cancel.
+ * Phase 7–17: inspector, draft, validate, live runs, cancel, asset library.
  */
 function WorkflowCanvasInner() {
   const { screenToFlowPosition } = useReactFlow();
@@ -378,6 +379,7 @@ function WorkflowCanvasInner() {
         canRun={nodes.length > 0 && !workflowRun.isLive}
       />
       <NodeInspector node={selectedNode} onUpdateData={handleUpdateNodeData} />
+      <AssetLibrary />
       <ActivityTimeline
         events={workflowRun.events}
         selectedNodeId={selectedNode?.id ?? null}

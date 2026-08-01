@@ -8,6 +8,14 @@ from fastapi.responses import StreamingResponse
 
 from mitos_api.domain import (
     CancelRunResponse,
+    LibraryAsset,
+    LibraryBatchImportRequest,
+    LibraryBatchImportResponse,
+    LibraryImportRequest,
+    LibraryImportResponse,
+    LibraryListResponse,
+    LibraryPreviewRequest,
+    LibraryPreviewResponse,
     RunRequest,
     RunResponse,
     Workflow,
@@ -15,6 +23,14 @@ from mitos_api.domain import (
     validate_workflow,
 )
 from mitos_api.services import cancel_run, get_run, run_store, start_run
+from mitos_api.services.library import (
+    confirm_import,
+    get_library_asset,
+    import_batch,
+    list_library,
+    preview_import,
+)
+from mitos_api.services.library.service import allowed_upload_extension
 
 app = FastAPI(title="Mitos Flow API", version="0.1.0")
 
@@ -108,3 +124,53 @@ def run_events(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# --- Phase 17: managed Skill / Rules library ---------------------------------
+
+
+def _reject_disallowed_filename(filename: str) -> None:
+    if not allowed_upload_extension(filename):
+        raise HTTPException(
+            status_code=400,
+            detail="Only Markdown skill/rule files (.md, .mdc, .markdown) can be imported.",
+        )
+
+
+@app.post("/api/library/preview", response_model=LibraryPreviewResponse)
+def library_preview(request: LibraryPreviewRequest) -> LibraryPreviewResponse:
+    """Parse and normalize a file without writing to the managed library."""
+    _reject_disallowed_filename(request.filename)
+    return preview_import(request)
+
+
+@app.post("/api/library/import", response_model=LibraryImportResponse)
+def library_import(request: LibraryImportRequest) -> LibraryImportResponse:
+    """Confirm import: preserve original + write normalized manifest."""
+    _reject_disallowed_filename(request.filename)
+    return confirm_import(request)
+
+
+@app.post("/api/library/import/batch", response_model=LibraryBatchImportResponse)
+def library_import_batch(
+    request: LibraryBatchImportRequest,
+) -> LibraryBatchImportResponse:
+    """Import one Skill + multiple Rules (or any mix) in a single request."""
+    for file_req in request.files:
+        _reject_disallowed_filename(file_req.filename)
+    return import_batch(request)
+
+
+@app.get("/api/library", response_model=LibraryListResponse)
+def library_list() -> LibraryListResponse:
+    """List assets in the managed local library."""
+    return list_library()
+
+
+@app.get("/api/library/{asset_id}", response_model=LibraryAsset)
+def library_get(asset_id: str) -> LibraryAsset:
+    """Return original content + normalized manifest for one asset."""
+    asset = get_library_asset(asset_id)
+    if asset is None:
+        raise HTTPException(status_code=404, detail="Library asset not found")
+    return asset

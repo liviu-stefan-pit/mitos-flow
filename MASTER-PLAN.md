@@ -3,7 +3,7 @@
 > **Purpose of this document:** Single source of truth for what Mitos Flow is, how it should be built, and which phase is done. Update checkboxes as phases complete. Point every implementation chat at this file first.
 
 **Last updated:** 2026-07-29  
-**Current phase:** 17 (next)  
+**Current phase:** 18 (next)  
 **Stack:** Local React/Vite frontend + FastAPI backend · Cursor CLI first · Fake runner before real CLI
 
 ---
@@ -243,7 +243,7 @@ Rules:
 
 ### Reusable local assets
 
-- [ ] **Phase 17 — Skill and Rules file import**
+- [x] **Phase 17 — Skill and Rules file import**
   - Drag/drop Markdown skill/rule files → managed local library (not raw path access)
   - Preserve original + normalized manifest; preview/confirm flow
   - **Gate:** Import one Skill + multiple Rules; malformed frontmatter reported safely
@@ -431,7 +431,7 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 14 | 2026-07-26 | Named input ports + InputEnvelope; wait_for_all joins; blocked on missing |
 | 15 | 2026-07-29 | SSE live events, edge animation, activity timeline |
 | 16 | 2026-07-29 | Cancel, timeout, cleanup hooks, branch failure reporting |
-| 17 | | |
+| 17 | 2026-07-29 | Managed library import: preview/confirm, original+manifest, malformed frontmatter |
 | 18 | | |
 | 19 | | |
 | 20 | | |

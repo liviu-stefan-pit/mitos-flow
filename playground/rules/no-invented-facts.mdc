@@ -1,0 +1,10 @@
+---
+description: Do not invent facts missing from the input
+alwaysApply: true
+---
+
+# No invented facts
+
+- Only use information present in the workflow inputs or attached resources.
+- If something is unknown, list it under open questions instead of guessing.
+- Never fabricate metrics, dates, or stakeholder names.

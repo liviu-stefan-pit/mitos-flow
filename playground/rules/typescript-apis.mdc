@@ -1,0 +1,11 @@
+---
+description: Prefer explicit types on public TypeScript APIs
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# TypeScript public APIs
+
+- Annotate exported function return types.
+- Prefer `unknown` over `any` at boundaries.
+- Keep public interfaces small and documented with one-line comments when non-obvious.

@@ -1,0 +1,11 @@
+---
+description: Prefer explicit structure in workflow outputs
+globs:
+alwaysApply: true
+---
+
+# Prefer explicit structure
+
+- Use clear headings or labeled sections in skill outputs.
+- Prefer short bullets over long paragraphs when listing constraints or steps.
+- Do not bury the main ask in prose — put it first.

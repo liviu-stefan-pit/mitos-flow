@@ -3,7 +3,7 @@
 > Running log of completed work. Update after each phase.
 
 **Last updated:** 2026-07-29  
-**Current phase:** 17 (next)
+**Current phase:** 18 (next)
 
 ---
 
@@ -28,6 +28,7 @@
 | 14 | 2026-07-26 | Named inputs + wait_for_all joins |
 | 15 | 2026-07-29 | Live SSE run events + canvas animation/timeline |
 | 16 | 2026-07-29 | Cancel, per-node timeout, cleanup, branch failure |
+| 17 | 2026-07-29 | Skill/Rules Markdown import into managed local library |
 
 ---
 
@@ -245,6 +246,23 @@
 
 ---
 
+### Phase 17 — Skill and Rules file import
+
+**Status:** Complete  
+**Date:** 2026-07-29
+
+- Managed local library under `MITOS_LIBRARY_ROOT` (default: `.mitos-flow-library/` in cwd) — no raw path access
+- Preview + confirm import flow: `POST /api/library/preview`, `POST /api/library/import`, batch import, list/get
+- Preserves original Markdown alongside normalized `manifest.json` (name, description, frontmatter, body)
+- Parses Cursor-style Skill (`SKILL.md` + name/description) and Rules (`.mdc`) frontmatter via PyYAML SafeLoader
+- Malformed / unclosed / invalid YAML frontmatter reported as safe validation errors (no crash)
+- Frontend: bottom-left Asset library panel with drag/drop, preview dialog, confirm import, asset list
+- Gate tests: one Skill + multiple Rules batch import; malformed frontmatter fixtures
+- Backend tests: 73 passing (12 new in `test_library.py`); frontend: 62 passing (9 new library tests)
+- **Manual check:** Drop a Cursor `SKILL.md`; preview name/description/body; confirm import; asset appears in library
+
+---
+
 ## Known issues
 
 _None._
@@ -253,4 +271,4 @@ _None._
 
 ## Next up
 
-- Phase 17: Skill and Rules file import
+- Phase 18: Attach Rules to Skills

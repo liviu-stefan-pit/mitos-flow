@@ -1,0 +1,9 @@
+Project: Mitos Flow local demo
+Audience: engineers evaluating the workflow builder
+Notes:
+- Need a visual canvas for chaining local AI skills
+- Fake runner first, Cursor CLI later
+- Import skills/rules into a managed library (no raw path access)
+- Demo should show Input → Draft → Polish → Output
+Open questions:
+- When do we attach rules to skills in the UI?

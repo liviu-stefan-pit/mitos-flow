@@ -1,5 +1,18 @@
 """Shared workflow domain models and validation (Phase 9+)."""
 
+from mitos_api.domain.library import (
+    AssetKind,
+    LibraryAsset,
+    LibraryAssetManifest,
+    LibraryAssetSummary,
+    LibraryBatchImportRequest,
+    LibraryBatchImportResponse,
+    LibraryImportRequest,
+    LibraryImportResponse,
+    LibraryListResponse,
+    LibraryPreviewRequest,
+    LibraryPreviewResponse,
+)
 from mitos_api.domain.run import (
     CancelRunResponse,
     NodeRunResult,
@@ -38,12 +51,23 @@ from mitos_api.domain.workflow import (
 
 __all__ = [
     "ArtifactOutputMode",
+    "AssetKind",
     "ArtifactOutputNodeSettings",
     "CancelRunResponse",
     "EdgeKind",
     "InputEnvelope",
     "InputNodeSettings",
     "JoinPolicy",
+    "LibraryAsset",
+    "LibraryAssetManifest",
+    "LibraryAssetSummary",
+    "LibraryBatchImportRequest",
+    "LibraryBatchImportResponse",
+    "LibraryImportRequest",
+    "LibraryImportResponse",
+    "LibraryListResponse",
+    "LibraryPreviewRequest",
+    "LibraryPreviewResponse",
     "KnowledgeBaseNodeSettings",
     "NodeKind",
     "NodeRunResult",

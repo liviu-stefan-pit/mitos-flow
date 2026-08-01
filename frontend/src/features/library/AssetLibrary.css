@@ -1,0 +1,227 @@
+.asset-library {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 15;
+  width: min(320px, calc(100% - 24px));
+  max-height: min(360px, calc(100% - 140px));
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #c5c9d3;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  font-size: 0.78rem;
+}
+
+.asset-library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.asset-library-header button {
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #c5c9d3;
+  background: #f8fafc;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.asset-library-dropzone {
+  border: 1.5px dashed #94a3b8;
+  border-radius: 8px;
+  padding: 0.85rem 0.75rem;
+  text-align: center;
+  color: #475569;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.asset-library-dropzone:hover,
+.asset-library-dropzone-active {
+  border-color: #8b5cf6;
+  background: #f5f3ff;
+  color: #5b21b6;
+}
+
+.asset-library-dropzone-hint {
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+
+.asset-library-list {
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.asset-library-empty {
+  color: #64748b;
+  font-size: 0.75rem;
+  padding: 0.35rem 0;
+}
+
+.asset-library-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+}
+
+.asset-library-item-kind {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.asset-library-item-name {
+  font-weight: 500;
+  color: #1a1a2e;
+}
+
+.asset-library-item-desc {
+  color: #64748b;
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-library-error {
+  padding: 0.45rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.75rem;
+}
+
+.asset-library-status {
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 0.75rem;
+}
+
+.asset-preview-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.35);
+  padding: 1rem;
+}
+
+.asset-preview-dialog {
+  width: min(520px, 100%);
+  max-height: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid #c5c9d3;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-size: 0.8rem;
+}
+
+.asset-preview-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1a1a2e;
+}
+
+.asset-preview-meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  color: #334155;
+}
+
+.asset-preview-meta dt {
+  font-weight: 600;
+  color: #64748b;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.asset-preview-body {
+  margin: 0;
+  overflow: auto;
+  max-height: 180px;
+  padding: 0.55rem;
+  border-radius: 6px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.asset-preview-errors {
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.asset-preview-errors ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.asset-preview-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+.asset-preview-actions button {
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #c5c9d3;
+  background: #f8fafc;
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+
+.asset-preview-actions button[data-testid="asset-preview-confirm"]:not(:disabled) {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.asset-preview-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.asset-preview-queue {
+  font-size: 0.72rem;
+  color: #64748b;
+}

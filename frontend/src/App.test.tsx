@@ -6,7 +6,26 @@ vi.mock("./features/health/healthApi", () => ({
   checkBackendHealth: vi.fn(),
 }));
 
+vi.mock("./features/library/libraryApi", () => ({
+  listLibraryAssets: vi.fn().mockReturnValue(new Promise(() => {})),
+  previewLibraryFile: vi.fn(),
+  importLibraryFile: vi.fn(),
+  importLibraryBatch: vi.fn(),
+  getLibraryAsset: vi.fn(),
+  isLibraryMarkdownFilename: (name: string) =>
+    /\.(md|mdc|markdown)$/i.test(name),
+  LibraryApiError: class LibraryApiError extends Error {
+    status?: number;
+    constructor(message: string, status?: number) {
+      super(message);
+      this.name = "LibraryApiError";
+      this.status = status;
+    }
+  },
+}));
+
 import { checkBackendHealth } from "./features/health/healthApi";
+import * as libraryApi from "./features/library/libraryApi";
 
 const mockedCheck = vi.mocked(checkBackendHealth);
 
@@ -39,6 +58,7 @@ beforeAll(() => {
 describe("App", () => {
   beforeEach(() => {
     mockedCheck.mockReset();
+    vi.mocked(libraryApi.listLibraryAssets).mockReturnValue(new Promise(() => {}));
   });
 
   it("renders the Mitos Flow header", () => {

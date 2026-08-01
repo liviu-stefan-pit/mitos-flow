@@ -1,0 +1,9 @@
+---
+description: Prefer explicit types in public APIs
+globs: "**/*.ts"
+alwaysApply: false
+---
+
+# TypeScript public APIs
+
+Always annotate exported function return types.
