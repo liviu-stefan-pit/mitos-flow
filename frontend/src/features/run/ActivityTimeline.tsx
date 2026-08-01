@@ -72,6 +72,31 @@ export function ActivityTimeline({
               {event.message ? (
                 <span className="activity-event-message">{event.message}</span>
               ) : null}
+              {event.attachedRules && event.attachedRules.length > 0 ? (
+                <ul
+                  className="activity-event-rules"
+                  data-testid="activity-event-rules"
+                >
+                  {event.attachedRules.map((rule) => (
+                    <li
+                      key={`${event.id}-${rule.rulesNodeId}`}
+                      data-testid="activity-attached-rule"
+                      data-rules-node-id={rule.rulesNodeId}
+                    >
+                      <strong>{rule.label}</strong>
+                      {rule.content ? (
+                        <span title={rule.content}>
+                          {rule.content.length > 60
+                            ? `${rule.content.slice(0, 60)}…`
+                            : rule.content}
+                        </span>
+                      ) : (
+                        <span>(empty)</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               {event.error ? (
                 <span className="activity-event-error">{event.error}</span>
               ) : null}

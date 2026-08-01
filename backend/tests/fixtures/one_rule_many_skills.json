@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "name": "Linear sample",
+    "name": "One rule many skills",
     "schemaVersion": 1
   },
   "nodes": [
@@ -25,29 +25,30 @@
       }
     },
     {
-      "id": "kb-1",
-      "kind": "knowledgeBase",
-      "label": "Product docs",
-      "position": { "x": 220, "y": 140 },
+      "id": "skill-2",
+      "kind": "skill",
+      "label": "Polish",
+      "position": { "x": 440, "y": 0 },
       "settings": {
-        "description": "KB for product facts"
+        "description": "Polish the reply",
+        "joinPolicy": "wait_for_all"
       }
     },
     {
-      "id": "rules-1",
+      "id": "rules-shared",
       "kind": "rules",
-      "label": "Tone rules",
-      "position": { "x": 40, "y": 140 },
+      "label": "Shared tone",
+      "position": { "x": 220, "y": 180 },
       "settings": {
-        "description": "Keep replies concise",
-        "content": ""
+        "description": "Shared constraints",
+        "content": "Be concise and direct."
       }
     },
     {
       "id": "output-1",
       "kind": "artifactOutput",
       "label": "Save reply",
-      "position": { "x": 440, "y": 0 },
+      "position": { "x": 660, "y": 0 },
       "settings": {
         "mode": "pass-through"
       }
@@ -66,6 +67,14 @@
       "id": "e-data-2",
       "kind": "dataFlow",
       "sourceNodeId": "skill-1",
+      "targetNodeId": "skill-2",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e-data-3",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-2",
       "targetNodeId": "output-1",
       "sourcePortId": "data-out",
       "targetPortId": "data-in"
@@ -73,7 +82,7 @@
     {
       "id": "e-res-1",
       "kind": "resourceAttachment",
-      "sourceNodeId": "kb-1",
+      "sourceNodeId": "rules-shared",
       "targetNodeId": "skill-1",
       "sourcePortId": "resource-out",
       "targetPortId": "resource-in"
@@ -81,8 +90,8 @@
     {
       "id": "e-res-2",
       "kind": "resourceAttachment",
-      "sourceNodeId": "rules-1",
-      "targetNodeId": "skill-1",
+      "sourceNodeId": "rules-shared",
+      "targetNodeId": "skill-2",
       "sourcePortId": "resource-out",
       "targetPortId": "resource-in"
     }

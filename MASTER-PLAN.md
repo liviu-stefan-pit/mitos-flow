@@ -2,8 +2,8 @@
 
 > **Purpose of this document:** Single source of truth for what Mitos Flow is, how it should be built, and which phase is done. Update checkboxes as phases complete. Point every implementation chat at this file first.
 
-**Last updated:** 2026-07-29  
-**Current phase:** 18 (next)  
+**Last updated:** 2026-08-01  
+**Current phase:** 19 (next)  
 **Stack:** Local React/Vite frontend + FastAPI backend · Cursor CLI first · Fake runner before real CLI
 
 ---
@@ -249,7 +249,7 @@ Rules:
   - **Gate:** Import one Skill + multiple Rules; malformed frontmatter reported safely
   - **Manual check:** Drop a Cursor skill file; preview; confirm import
 
-- [ ] **Phase 18 — Attach Rules to Skills**
+- [x] **Phase 18 — Attach Rules to Skills**
   - Resolve many-to-many Rules attachments before execution
   - Ordered rule content in runner request; visible in run trace
   - **Gate:** One rule → many skills; many rules → one skill; no duplication
@@ -432,7 +432,7 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 15 | 2026-07-29 | SSE live events, edge animation, activity timeline |
 | 16 | 2026-07-29 | Cancel, timeout, cleanup hooks, branch failure reporting |
 | 17 | 2026-07-29 | Managed library import: preview/confirm, original+manifest, malformed frontmatter |
-| 18 | | |
+| 18 | 2026-08-01 | Rules→Skill many-to-many resolve; ordered rules in runner request + run trace |
 | 19 | | |
 | 20 | | |
 | 21 | | |

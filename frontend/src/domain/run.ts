@@ -51,6 +51,14 @@ export type NodeRunResult = {
   output?: string | null;
   mediaType?: string | null;
   error?: string | null;
+  attachedRules?: AttachedRule[];
+};
+
+export type AttachedRule = {
+  rulesNodeId: string;
+  label: string;
+  content: string;
+  order: number;
 };
 
 export type RunEvent = {
@@ -64,6 +72,7 @@ export type RunEvent = {
   output?: string | null;
   mediaType?: string | null;
   error?: string | null;
+  attachedRules?: AttachedRule[];
   timestamp: string;
 };
 

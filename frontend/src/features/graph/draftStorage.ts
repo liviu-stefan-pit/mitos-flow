@@ -80,11 +80,21 @@ function normalizeNodeData(
       };
     case "skill":
     case "knowledgeBase":
+      return {
+        label,
+        description:
+          typeof record.description === "string" ? record.description : "",
+      };
     case "rules":
       return {
         label,
         description:
           typeof record.description === "string" ? record.description : "",
+        content: typeof record.content === "string" ? record.content : "",
+        libraryAssetId:
+          typeof record.libraryAssetId === "string"
+            ? record.libraryAssetId
+            : null,
       };
     case "artifactOutput":
       return {

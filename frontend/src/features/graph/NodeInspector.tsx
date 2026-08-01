@@ -1,4 +1,11 @@
+import { useEffect, useState } from "react";
 import type { Node } from "@xyflow/react";
+import type { LibraryAssetSummary } from "../../domain/library";
+import {
+  getLibraryAsset,
+  LibraryApiError,
+  listLibraryAssets,
+} from "../library/libraryApi";
 import {
   ARTIFACT_OUTPUT_MODES,
   isArtifactOutputMode,
@@ -99,8 +106,8 @@ export function NodeInspector({ node, onUpdateData }: NodeInspectorProps) {
       ) : null}
 
       {kind === "rules" ? (
-        <DescriptionField
-          testId="inspector-description"
+        <RulesFields
+          nodeId={node.id}
           data={node.data as RulesNodeData}
           onPatch={(patch) => onUpdateData(node.id, patch)}
         />
@@ -197,6 +204,118 @@ function DescriptionField({
         onChange={(event) => onPatch({ description: event.target.value })}
       />
     </label>
+  );
+}
+
+function RulesFields({
+  nodeId,
+  data,
+  onPatch,
+}: {
+  nodeId: string;
+  data: RulesNodeData;
+  onPatch: (patch: Partial<RulesNodeData> & { label?: string }) => void;
+}) {
+  const [assets, setAssets] = useState<LibraryAssetSummary[]>([]);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
+  const selectedAssetId = data.libraryAssetId ?? "";
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result = await listLibraryAssets();
+        if (cancelled) return;
+        setAssets(result.assets.filter((asset) => asset.kind === "rules"));
+        setLibraryError(null);
+      } catch (err) {
+        if (cancelled) return;
+        setLibraryError(
+          err instanceof LibraryApiError
+            ? err.message
+            : "Could not load library rules.",
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [nodeId]);
+
+  const applyFromLibrary = async (assetId: string) => {
+    if (!assetId) {
+      onPatch({ libraryAssetId: null });
+      return;
+    }
+    setApplying(true);
+    try {
+      const asset = await getLibraryAsset(assetId);
+      onPatch({
+        label: asset.manifest.name,
+        description: asset.manifest.description,
+        content: asset.manifest.body,
+        libraryAssetId: asset.manifest.id,
+      });
+      setLibraryError(null);
+    } catch (err) {
+      setLibraryError(
+        err instanceof LibraryApiError
+          ? err.message
+          : "Could not load the selected rules asset.",
+      );
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  return (
+    <>
+      <DescriptionField
+        testId="inspector-description"
+        data={data}
+        onPatch={(patch) => onPatch(patch)}
+      />
+      <label className="node-inspector-field">
+        <span>Rule content</span>
+        <textarea
+          data-testid="inspector-rules-content"
+          rows={5}
+          value={data.content ?? ""}
+          onChange={(event) =>
+            onPatch({ content: event.target.value, libraryAssetId: null })
+          }
+        />
+      </label>
+      <label className="node-inspector-field">
+        <span>Apply from library</span>
+        <select
+          data-testid="inspector-rules-library"
+          value={selectedAssetId}
+          disabled={applying}
+          onChange={(event) => {
+            void applyFromLibrary(event.target.value);
+          }}
+        >
+          <option value="">— Manual / none —</option>
+          {assets.map((asset) => (
+            <option key={asset.id} value={asset.id}>
+              {asset.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {libraryError ? (
+        <p className="node-inspector-hint" role="alert" data-testid="inspector-rules-library-error">
+          {libraryError}
+        </p>
+      ) : (
+        <p className="node-inspector-hint">
+          Attach this Rules node to Skills with a dashed resource edge. Content
+          is resolved into the Skill run request and activity trace.
+        </p>
+      )}
+    </>
   );
 }
 

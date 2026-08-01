@@ -20,6 +20,7 @@ from mitos_api.domain.run import (
 )
 from mitos_api.domain.validation import validate_workflow
 from mitos_api.domain.workflow import (
+    AttachedRule,
     InputNodeSettings,
     NodeKind,
     ValidationIssue,
@@ -28,7 +29,11 @@ from mitos_api.domain.workflow import (
 from mitos_api.services.run_store import RunStore, run_store
 from mitos_api.services.runners.base import Runner, SkillExecutionRequest
 from mitos_api.services.runners.fake import FakeRunner
-from mitos_api.services.scheduler import collect_input_envelopes, plan_linear_chain
+from mitos_api.services.scheduler import (
+    collect_attached_rules,
+    collect_input_envelopes,
+    plan_linear_chain,
+)
 
 EventCallback = Callable[..., Any]
 CancelCheck = Callable[[], bool]
@@ -91,8 +96,9 @@ def execute_run(
     Supported shape: one or more Inputs → Skills (linear path and/or
     wait_for_all joins on named ports) → one or more pass-through Artifact
     Outputs. Skills run in topological order; each Skill waits for every
-    declared data-in port. Failure, timeout, blocked join, or cancel stops
-    the chain so no downstream node starts.
+    declared data-in port. Phase 18 resolves Rules resource attachments into
+    the Skill runner request (ordered, de-duplicated). Failure, timeout,
+    blocked join, or cancel stops the chain so no downstream node starts.
     """
     rid = run_id or str(uuid.uuid4())
     active_runner: Runner = runner if runner is not None else FakeRunner()
@@ -108,6 +114,7 @@ def execute_run(
         output: str | None = None,
         media_type: str | None = None,
         error: str | None = None,
+        attached_rules: list[AttachedRule] | None = None,
     ) -> None:
         if on_event is not None:
             on_event(
@@ -118,6 +125,7 @@ def execute_run(
                 output=output,
                 media_type=media_type,
                 error=error,
+                attached_rules=attached_rules,
             )
 
     validation = validate_workflow(workflow)
@@ -153,9 +161,9 @@ def execute_run(
     arrival_counter = 0
     failed_upstream: str | None = None
 
-    # Optional resource nodes are present but not executed yet.
+    # KB resources are not executed yet (Phase 19). Rules resolve in Phase 18.
     for node in workflow.nodes:
-        if node.kind in (NodeKind.KNOWLEDGE_BASE, NodeKind.RULES):
+        if node.kind is NodeKind.KNOWLEDGE_BASE:
             node_results.append(
                 NodeRunResult(
                     nodeId=node.id,
@@ -165,8 +173,49 @@ def execute_run(
             emit(
                 RunEventType.SKIPPED,
                 node_id=node.id,
-                message="Resource node skipped in this phase",
+                message="Knowledge Base skipped until Phase 19",
             )
+
+    def finalize_unused_rules() -> None:
+        """Mark Rules nodes that were never attached to an executed Skill as skipped."""
+        already = {r.nodeId for r in node_results}
+        for node in workflow.nodes:
+            if node.kind is not NodeKind.RULES or node.id in already:
+                continue
+            node_results.append(
+                NodeRunResult(
+                    nodeId=node.id,
+                    state=NodeRunState.SKIPPED,
+                )
+            )
+            emit(
+                RunEventType.SKIPPED,
+                node_id=node.id,
+                message="Rules node not attached to an executed Skill",
+            )
+
+    def record_attached_rules(attached: list[AttachedRule]) -> None:
+        """Mark attached Rules nodes completed (once) so content is in the trace."""
+        already = {r.nodeId for r in node_results}
+        for rule in attached:
+            if rule.rulesNodeId in already:
+                continue
+            node_results.append(
+                NodeRunResult(
+                    nodeId=rule.rulesNodeId,
+                    state=NodeRunState.COMPLETED,
+                    output=rule.content,
+                    mediaType="text/markdown",
+                )
+            )
+            emit(
+                RunEventType.COMPLETED,
+                node_id=rule.rulesNodeId,
+                message=f"Rules attached: {rule.label}",
+                output=rule.content,
+                media_type="text/markdown",
+            )
+            already.add(rule.rulesNodeId)
 
     def mark_cancelled_remaining(
         remaining_skills: list,
@@ -206,6 +255,7 @@ def execute_run(
                 message=msg,
                 error=msg,
             )
+        finalize_unused_rules()
         emit(
             RunEventType.CANCELLED,
             scope=RunEventScope.RUN,
@@ -269,6 +319,7 @@ def execute_run(
                 message=reason,
                 error=reason,
             )
+        finalize_unused_rules()
         emit(
             event_type if event_type is RunEventType.FAILED else RunEventType.FAILED,
             scope=RunEventScope.RUN,
@@ -381,6 +432,9 @@ def execute_run(
                 event_type=RunEventType.BLOCKED,
             )
 
+        attached_rules = collect_attached_rules(skill_node, workflow)
+        record_attached_rules(attached_rules)
+
         emit(RunEventType.RUNNING, node_id=skill_node.id)
         try:
             _interruptible_sleep(opts.delayMs, cancel_check)
@@ -390,6 +444,7 @@ def execute_run(
                     nodeId=skill_node.id,
                     state=NodeRunState.CANCELLED,
                     error="Cancelled before Skill execution",
+                    attachedRules=attached_rules,
                 )
             )
             emit(
@@ -397,6 +452,7 @@ def execute_run(
                 node_id=skill_node.id,
                 message="Cancelled before Skill execution",
                 error="Cancelled before Skill execution",
+                attached_rules=attached_rules,
             )
             _call_cleanup(active_runner, skill_node.id)
             return mark_cancelled_remaining(
@@ -415,6 +471,7 @@ def execute_run(
                     inputPayload=primary.payload,
                     inputMediaType=primary.mediaType,
                     inputs=envelopes,
+                    rules=attached_rules,
                 ),
                 timeout_ms=opts.nodeTimeoutMs,
             )
@@ -425,6 +482,7 @@ def execute_run(
                     nodeId=skill_node.id,
                     state=NodeRunState.TIMEOUT,
                     error=msg,
+                    attachedRules=attached_rules,
                 )
             )
             emit(
@@ -432,6 +490,7 @@ def execute_run(
                 node_id=skill_node.id,
                 message=msg,
                 error=msg,
+                attached_rules=attached_rules,
             )
             _call_cleanup(active_runner, skill_node.id)
             return mark_failed_remaining(
@@ -451,6 +510,7 @@ def execute_run(
                     nodeId=skill_node.id,
                     state=NodeRunState.FAILED,
                     error=str(exc),
+                    attachedRules=attached_rules,
                 )
             )
             emit(
@@ -458,6 +518,7 @@ def execute_run(
                 node_id=skill_node.id,
                 message=str(exc),
                 error=str(exc),
+                attached_rules=attached_rules,
             )
             _call_cleanup(active_runner, skill_node.id)
             return mark_failed_remaining(
@@ -474,12 +535,19 @@ def execute_run(
 
         payload = skill_result.outputPayload
         media_type = skill_result.mediaType
+        rules_message = None
+        if attached_rules:
+            labels = ", ".join(rule.label for rule in attached_rules)
+            rules_message = (
+                f"Attached {len(attached_rules)} rule(s): {labels}"
+            )
         node_results.append(
             NodeRunResult(
                 nodeId=skill_node.id,
                 state=NodeRunState.COMPLETED,
                 output=payload,
                 mediaType=media_type,
+                attachedRules=attached_rules,
             )
         )
         completed_outputs[skill_node.id] = (payload, media_type)
@@ -488,8 +556,10 @@ def execute_run(
         emit(
             RunEventType.COMPLETED,
             node_id=skill_node.id,
+            message=rules_message,
             output=payload,
             media_type=media_type,
+            attached_rules=attached_rules,
         )
 
     if cancel_check():
@@ -544,6 +614,7 @@ def execute_run(
                     message=reason,
                     error=reason,
                 )
+            finalize_unused_rules()
             emit(
                 RunEventType.CANCELLED,
                 scope=RunEventScope.RUN,
@@ -577,6 +648,7 @@ def execute_run(
             media_type=terminal_media,
         )
 
+    finalize_unused_rules()
     emit(
         RunEventType.COMPLETED,
         scope=RunEventScope.RUN,

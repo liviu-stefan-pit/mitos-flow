@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from mitos_api.domain.workflow import ValidationIssue, Workflow
+from mitos_api.domain.workflow import AttachedRule, ValidationIssue, Workflow
 
 
 class NodeRunState(str, Enum):
@@ -78,6 +78,7 @@ class NodeRunResult(BaseModel):
     output: str | None = None
     mediaType: str | None = None
     error: str | None = None
+    attachedRules: list[AttachedRule] = Field(default_factory=list)
 
 
 class RunEvent(BaseModel):
@@ -95,6 +96,7 @@ class RunEvent(BaseModel):
     output: str | None = None
     mediaType: str | None = None
     error: str | None = None
+    attachedRules: list[AttachedRule] = Field(default_factory=list)
     timestamp: str
 
 

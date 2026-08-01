@@ -127,19 +127,21 @@ def test_execute_simple_linear_exact_io_and_node_states():
     assert by_id["output-1"].output == EXPECTED_FAKE_OUTPUT
 
 
-def test_execute_valid_linear_skips_resource_nodes():
-    """KB/Rules may be attached but are not executed in Phase 12."""
+def test_execute_valid_linear_resolves_attached_rules():
+    """KB stays skipped; attached Rules resolve into the Skill request (Phase 18)."""
     workflow = Workflow.model_validate(_load_fixture("valid_linear.json"))
     result = execute_run(workflow)
 
     assert result.status == "completed"
-    assert result.output == EXPECTED_FAKE_OUTPUT
+    expected = "fake::Draft::Hello from input::rules[rules-1=]"
+    assert result.output == expected
 
     by_id = {r.nodeId: r for r in result.nodeResults}
     assert by_id["kb-1"].state.value == "skipped"
-    assert by_id["rules-1"].state.value == "skipped"
-    assert by_id["skill-1"].output == EXPECTED_FAKE_OUTPUT
-    assert by_id["output-1"].output == EXPECTED_FAKE_OUTPUT
+    assert by_id["rules-1"].state.value == "completed"
+    assert by_id["skill-1"].output == expected
+    assert by_id["skill-1"].attachedRules[0].rulesNodeId == "rules-1"
+    assert by_id["output-1"].output == expected
 
 
 def test_execute_linear_chain_order_and_composed_output():

@@ -30,7 +30,11 @@ function sampleUiGraph(): { nodes: Node[]; edges: Edge[] } {
       id: "rules-1",
       type: "rules",
       position: { x: 40, y: 160 },
-      data: { label: "Tone", description: "Stay concise" },
+      data: {
+        label: "Tone",
+        description: "Stay concise",
+        content: "Prefer short sentences.",
+      },
     },
     {
       id: "output-1",
@@ -110,6 +114,8 @@ describe("uiGraphToDomainWorkflow", () => {
     });
     expect(byId["rules-1"].settings).toEqual({
       description: "Stay concise",
+      content: "Prefer short sentences.",
+      libraryAssetId: null,
     });
     expect(byId["output-1"].settings).toEqual({ mode: "selector" });
 

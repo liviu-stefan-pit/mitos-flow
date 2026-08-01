@@ -28,6 +28,7 @@ from mitos_api.domain.validation import validate_workflow
 from mitos_api.domain.workflow import (
     ArtifactOutputMode,
     ArtifactOutputNodeSettings,
+    AttachedRule,
     EdgeKind,
     InputEnvelope,
     InputNodeSettings,
@@ -53,6 +54,7 @@ __all__ = [
     "ArtifactOutputMode",
     "AssetKind",
     "ArtifactOutputNodeSettings",
+    "AttachedRule",
     "CancelRunResponse",
     "EdgeKind",
     "InputEnvelope",

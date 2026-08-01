@@ -46,7 +46,8 @@ const RESET_DRAFT_CONFIRM =
   "Reset the saved draft? The current canvas and browser draft will be cleared.";
 
 /**
- * Phase 7–17: inspector, draft, validate, live runs, cancel, asset library.
+ * Phase 7–18: inspector, draft, validate, live runs, cancel, asset library,
+ * Rules attachments in run trace.
  */
 function WorkflowCanvasInner() {
   const { screenToFlowPosition } = useReactFlow();

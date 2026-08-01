@@ -100,6 +100,23 @@ class RulesNodeSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     description: str = ""
+    content: str = ""
+    libraryAssetId: str | None = None
+
+
+class AttachedRule(BaseModel):
+    """
+    One Rules node resolved onto a Skill before execution (Phase 18+).
+
+    ``order`` is the stable index after deterministic sort by rules node id.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    rulesNodeId: str = Field(min_length=1)
+    label: str
+    content: str = ""
+    order: int = Field(ge=0)
 
 
 class ArtifactOutputNodeSettings(BaseModel):

@@ -6,7 +6,7 @@ from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from mitos_api.domain.workflow import InputEnvelope
+from mitos_api.domain.workflow import AttachedRule, InputEnvelope
 
 
 class SkillExecutionRequest(BaseModel):
@@ -20,6 +20,7 @@ class SkillExecutionRequest(BaseModel):
     inputPayload: str = ""
     inputMediaType: str = "text/plain"
     inputs: list[InputEnvelope] = Field(default_factory=list)
+    rules: list[AttachedRule] = Field(default_factory=list)
 
 
 class SkillExecutionResult(BaseModel):

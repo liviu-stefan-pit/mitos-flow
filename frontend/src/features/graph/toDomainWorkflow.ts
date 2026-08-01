@@ -142,6 +142,11 @@ function settingsFromUiData(kind: NodeKind, data: unknown): NodeSettings {
       return {
         description:
           typeof rules.description === "string" ? rules.description : "",
+        content: typeof rules.content === "string" ? rules.content : "",
+        libraryAssetId:
+          typeof rules.libraryAssetId === "string"
+            ? rules.libraryAssetId
+            : null,
       };
     }
     case "artifactOutput": {

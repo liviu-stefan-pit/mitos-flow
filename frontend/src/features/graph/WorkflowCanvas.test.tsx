@@ -326,4 +326,27 @@ describe("WorkflowCanvas", () => {
     expect(screen.getByTestId("activity-run-status")).toHaveTextContent("idle");
   });
 
+  it("edits Rules content in the inspector for Skill attachment", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ assets: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+
+    render(<WorkflowCanvas />);
+    fireEvent.click(screen.getByTestId("palette-add-rules"));
+    fireEvent.click(screen.getByTestId("node-rules"));
+    fireEvent.change(screen.getByTestId("inspector-rules-content"), {
+      target: { value: "Keep replies concise." },
+    });
+    expect(screen.getByTestId("inspector-rules-content")).toHaveValue(
+      "Keep replies concise.",
+    );
+    expect(screen.getByTestId("inspector-rules-library")).toBeInTheDocument();
+  });
+
 });

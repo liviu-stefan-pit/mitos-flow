@@ -2,8 +2,8 @@
 
 > Running log of completed work. Update after each phase.
 
-**Last updated:** 2026-07-29  
-**Current phase:** 18 (next)
+**Last updated:** 2026-08-01  
+**Current phase:** 19 (next)
 
 ---
 
@@ -29,6 +29,7 @@
 | 15 | 2026-07-29 | Live SSE run events + canvas animation/timeline |
 | 16 | 2026-07-29 | Cancel, per-node timeout, cleanup, branch failure |
 | 17 | 2026-07-29 | Skill/Rules Markdown import into managed local library |
+| 18 | 2026-08-01 | Attach Rules to Skills (many-to-many, ordered, traced) |
 
 ---
 
@@ -263,6 +264,23 @@
 
 ---
 
+### Phase 18 — Attach Rules to Skills
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- Resolve Rules → Skill `resourceAttachment` edges before each Skill executes (`collect_attached_rules`)
+- Many-to-many: one Rules node → many Skills; many Rules → one Skill; duplicate edges collapsed by Rules node id
+- Ordered by Rules node id into `SkillExecutionRequest.rules` and FakeRunner `::rules[…]` suffix
+- Run trace: Skill `NodeRunResult.attachedRules` + completed SSE event message/list; Activity timeline renders attached rules
+- Rules nodes with content editable in inspector; optional apply-from-library for imported `.mdc` assets
+- Unattached Rules stay `skipped`; KB still skipped (Phase 19); attached Rules mark `completed` once
+- Gate fixtures/tests: `many_rules_one_skill`, `one_rule_many_skills`, dedupe + orphan skip
+- Backend tests: 78 passing (5 new in `test_rules_attach.py`); frontend: 64 passing (Activity timeline + Rules inspector)
+- **Manual check:** Attach two Rules to one Skill; run; Activity shows both rules on the Skill completed event
+
+---
+
 ## Known issues
 
 _None._
@@ -271,4 +289,4 @@ _None._
 
 ## Next up
 
-- Phase 18: Attach Rules to Skills
+- Phase 19: Basic KB resources without embeddings

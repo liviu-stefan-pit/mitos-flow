@@ -4,7 +4,16 @@ from __future__ import annotations
 
 import time
 
+from mitos_api.domain.workflow import AttachedRule
 from mitos_api.services.runners.base import SkillExecutionRequest, SkillExecutionResult
+
+
+def _format_rules_suffix(rules: list[AttachedRule]) -> str:
+    """Append ordered attached rules so they are visible in fake output / trace."""
+    if not rules:
+        return ""
+    parts = "|".join(f"{rule.rulesNodeId}={rule.content}" for rule in rules)
+    return f"::rules[{parts}]"
 
 
 class FakeRunner:
@@ -17,22 +26,29 @@ class FakeRunner:
     Multi-input output format (Phase 14+), ports sorted by name so arrival
     order cannot change the result:
       fake::{skillLabel}::{portA}={payloadA}|{portB}={payloadB}
+
+    Attached Rules (Phase 18+) append a deterministic suffix:
+      …::rules[{rulesNodeId}={content}|…]
     """
 
     def __init__(self, *, execute_delay_ms: int = 0) -> None:
         self.execute_delay_ms = execute_delay_ms
         self.cleaned_up: list[str] = []
+        self.last_request: SkillExecutionRequest | None = None
 
     def execute(self, request: SkillExecutionRequest) -> SkillExecutionResult:
+        self.last_request = request
         if self.execute_delay_ms > 0:
             time.sleep(self.execute_delay_ms / 1000.0)
+
+        rules_suffix = _format_rules_suffix(request.rules)
 
         if len(request.inputs) > 1:
             parts = "|".join(
                 f"{envelope.port}={envelope.payload}"
                 for envelope in sorted(request.inputs, key=lambda item: item.port)
             )
-            output = f"fake::{request.skillLabel}::{parts}"
+            output = f"fake::{request.skillLabel}::{parts}{rules_suffix}"
             media_type = next(
                 (e.mediaType for e in sorted(request.inputs, key=lambda i: i.port)),
                 request.inputMediaType or "text/plain",
@@ -46,7 +62,7 @@ class FakeRunner:
             payload = request.inputPayload
             media_type = request.inputMediaType or "text/plain"
 
-        output = f"fake::{request.skillLabel}::{payload}"
+        output = f"fake::{request.skillLabel}::{payload}{rules_suffix}"
         return SkillExecutionResult(outputPayload=output, mediaType=media_type)
 
     def cleanup(self, skill_node_id: str) -> None:

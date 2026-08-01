@@ -48,6 +48,8 @@ export type KnowledgeBaseNodeSettings = {
 
 export type RulesNodeSettings = {
   description: string;
+  content: string;
+  libraryAssetId?: string | null;
 };
 
 export type ArtifactOutputNodeSettings = {
@@ -131,8 +133,9 @@ export function defaultSettingsForKind(kind: NodeKind): NodeSettings {
     case "skill":
       return { description: "", joinPolicy: "wait_for_all" };
     case "knowledgeBase":
-    case "rules":
       return { description: "" };
+    case "rules":
+      return { description: "", content: "", libraryAssetId: null };
     case "artifactOutput":
       return { mode: "pass-through" };
   }

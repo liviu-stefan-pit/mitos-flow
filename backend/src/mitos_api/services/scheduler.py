@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from mitos_api.domain.workflow import (
     ArtifactOutputMode,
     ArtifactOutputNodeSettings,
+    AttachedRule,
     EdgeKind,
     InputEnvelope,
     JoinPolicy,
@@ -15,6 +16,7 @@ from mitos_api.domain.workflow import (
     Port,
     PortDirection,
     PortKind,
+    RulesNodeSettings,
     SkillNodeSettings,
     ValidationIssue,
     Workflow,
@@ -489,6 +491,51 @@ def collect_input_envelopes(
 
     envelopes = sorted(envelopes_by_port_id.values(), key=lambda item: item.port)
     return envelopes, None
+
+
+def collect_attached_rules(
+    skill: WorkflowNode,
+    workflow: Workflow,
+) -> list[AttachedRule]:
+    """
+    Resolve Rules → Skill resource attachments before Skill execution (Phase 18).
+
+    Many-to-many: one Rules node may attach to many Skills; many Rules may
+    attach to one Skill. Duplicate edges to the same Rules node are collapsed
+    so rule content is never duplicated in the runner request. Order is by
+    Rules node id for deterministic FakeRunner / Cursor prompt assembly.
+    Knowledge Base attachments are ignored here (Phase 19).
+    """
+    nodes_by_id = {node.id: node for node in workflow.nodes}
+    seen: dict[str, WorkflowNode] = {}
+
+    for edge in workflow.edges:
+        if edge.kind is not EdgeKind.RESOURCE_ATTACHMENT:
+            continue
+        if edge.targetNodeId != skill.id:
+            continue
+        source = nodes_by_id.get(edge.sourceNodeId)
+        if source is None or source.kind is not NodeKind.RULES:
+            continue
+        # First edge wins; later duplicates are ignored (no content duplication).
+        if source.id not in seen:
+            seen[source.id] = source
+
+    ordered = sorted(seen.values(), key=lambda node: node.id)
+    attached: list[AttachedRule] = []
+    for index, node in enumerate(ordered):
+        content = ""
+        if isinstance(node.settings, RulesNodeSettings):
+            content = node.settings.content
+        attached.append(
+            AttachedRule(
+                rulesNodeId=node.id,
+                label=node.label,
+                content=content,
+                order=index,
+            )
+        )
+    return attached
 
 
 def _find_data_in_port(skill: WorkflowNode, port_id: str) -> Port | None:
