@@ -20,16 +20,23 @@ from mitos_api.domain.run import (
 )
 from mitos_api.domain.validation import validate_workflow
 from mitos_api.domain.workflow import (
+    AttachedKnowledgeBase,
     AttachedRule,
+    CitedChunk,
     InputNodeSettings,
     NodeKind,
     ValidationIssue,
     Workflow,
 )
+from mitos_api.services.kb.retrieval import (
+    build_retrieval_query,
+    retrieve_cited_chunks,
+)
 from mitos_api.services.run_store import RunStore, run_store
 from mitos_api.services.runners.base import Runner, SkillExecutionRequest
 from mitos_api.services.runners.fake import FakeRunner
 from mitos_api.services.scheduler import (
+    collect_attached_knowledge_bases,
     collect_attached_rules,
     collect_input_envelopes,
     plan_linear_chain,
@@ -97,7 +104,9 @@ def execute_run(
     wait_for_all joins on named ports) → one or more pass-through Artifact
     Outputs. Skills run in topological order; each Skill waits for every
     declared data-in port. Phase 18 resolves Rules resource attachments into
-    the Skill runner request (ordered, de-duplicated). Failure, timeout,
+    the Skill runner request (ordered, de-duplicated). Phase 19 resolves
+    Knowledge Base attachments and runs deterministic keyword retrieval so
+    cited chunks are available to the runner and run trace. Failure, timeout,
     blocked join, or cancel stops the chain so no downstream node starts.
     """
     rid = run_id or str(uuid.uuid4())
@@ -115,6 +124,7 @@ def execute_run(
         media_type: str | None = None,
         error: str | None = None,
         attached_rules: list[AttachedRule] | None = None,
+        knowledge_chunks: list[CitedChunk] | None = None,
     ) -> None:
         if on_event is not None:
             on_event(
@@ -126,6 +136,7 @@ def execute_run(
                 media_type=media_type,
                 error=error,
                 attached_rules=attached_rules,
+                knowledge_chunks=knowledge_chunks,
             )
 
     validation = validate_workflow(workflow)
@@ -161,38 +172,36 @@ def execute_run(
     arrival_counter = 0
     failed_upstream: str | None = None
 
-    # KB resources are not executed yet (Phase 19). Rules resolve in Phase 18.
-    for node in workflow.nodes:
-        if node.kind is NodeKind.KNOWLEDGE_BASE:
-            node_results.append(
-                NodeRunResult(
-                    nodeId=node.id,
-                    state=NodeRunState.SKIPPED,
-                )
-            )
-            emit(
-                RunEventType.SKIPPED,
-                node_id=node.id,
-                message="Knowledge Base skipped until Phase 19",
-            )
-
-    def finalize_unused_rules() -> None:
-        """Mark Rules nodes that were never attached to an executed Skill as skipped."""
+    def finalize_unused_resources() -> None:
+        """Mark Rules/KB nodes never attached to an executed Skill as skipped."""
         already = {r.nodeId for r in node_results}
         for node in workflow.nodes:
-            if node.kind is not NodeKind.RULES or node.id in already:
+            if node.id in already:
                 continue
-            node_results.append(
-                NodeRunResult(
-                    nodeId=node.id,
-                    state=NodeRunState.SKIPPED,
+            if node.kind is NodeKind.RULES:
+                node_results.append(
+                    NodeRunResult(
+                        nodeId=node.id,
+                        state=NodeRunState.SKIPPED,
+                    )
                 )
-            )
-            emit(
-                RunEventType.SKIPPED,
-                node_id=node.id,
-                message="Rules node not attached to an executed Skill",
-            )
+                emit(
+                    RunEventType.SKIPPED,
+                    node_id=node.id,
+                    message="Rules node not attached to an executed Skill",
+                )
+            elif node.kind is NodeKind.KNOWLEDGE_BASE:
+                node_results.append(
+                    NodeRunResult(
+                        nodeId=node.id,
+                        state=NodeRunState.SKIPPED,
+                    )
+                )
+                emit(
+                    RunEventType.SKIPPED,
+                    node_id=node.id,
+                    message="Knowledge Base not attached to an executed Skill",
+                )
 
     def record_attached_rules(attached: list[AttachedRule]) -> None:
         """Mark attached Rules nodes completed (once) so content is in the trace."""
@@ -216,6 +225,45 @@ def execute_run(
                 media_type="text/markdown",
             )
             already.add(rule.rulesNodeId)
+
+    def record_attached_knowledge(
+        attached: list[AttachedKnowledgeBase],
+        chunks: list[CitedChunk],
+    ) -> None:
+        """Mark attached KB nodes completed (once); include cited chunks on first use."""
+        already = {r.nodeId for r in node_results}
+        chunks_by_kb: dict[str, list[CitedChunk]] = {}
+        for chunk in chunks:
+            chunks_by_kb.setdefault(chunk.kbNodeId, []).append(chunk)
+
+        for kb in attached:
+            if kb.kbNodeId in already:
+                continue
+            kb_chunks = chunks_by_kb.get(kb.kbNodeId, [])
+            citations = ", ".join(c.citation for c in kb_chunks) if kb_chunks else ""
+            message = (
+                f"KB attached: {kb.label} ({len(kb_chunks)} cited chunk(s))"
+                if kb_chunks
+                else f"KB attached: {kb.label} (no keyword matches)"
+            )
+            node_results.append(
+                NodeRunResult(
+                    nodeId=kb.kbNodeId,
+                    state=NodeRunState.COMPLETED,
+                    output=citations or kb.content,
+                    mediaType="text/plain",
+                    knowledgeChunks=kb_chunks,
+                )
+            )
+            emit(
+                RunEventType.COMPLETED,
+                node_id=kb.kbNodeId,
+                message=message,
+                output=citations or kb.content,
+                media_type="text/plain",
+                knowledge_chunks=kb_chunks,
+            )
+            already.add(kb.kbNodeId)
 
     def mark_cancelled_remaining(
         remaining_skills: list,
@@ -255,7 +303,7 @@ def execute_run(
                 message=msg,
                 error=msg,
             )
-        finalize_unused_rules()
+        finalize_unused_resources()
         emit(
             RunEventType.CANCELLED,
             scope=RunEventScope.RUN,
@@ -319,7 +367,7 @@ def execute_run(
                 message=reason,
                 error=reason,
             )
-        finalize_unused_rules()
+        finalize_unused_resources()
         emit(
             event_type if event_type is RunEventType.FAILED else RunEventType.FAILED,
             scope=RunEventScope.RUN,
@@ -435,6 +483,14 @@ def execute_run(
         attached_rules = collect_attached_rules(skill_node, workflow)
         record_attached_rules(attached_rules)
 
+        attached_kbs = collect_attached_knowledge_bases(skill_node, workflow)
+        query = build_retrieval_query(
+            envelopes[0].payload if envelopes else "",
+            envelopes,
+        )
+        knowledge_chunks = retrieve_cited_chunks(attached_kbs, query)
+        record_attached_knowledge(attached_kbs, knowledge_chunks)
+
         emit(RunEventType.RUNNING, node_id=skill_node.id)
         try:
             _interruptible_sleep(opts.delayMs, cancel_check)
@@ -445,6 +501,7 @@ def execute_run(
                     state=NodeRunState.CANCELLED,
                     error="Cancelled before Skill execution",
                     attachedRules=attached_rules,
+                    knowledgeChunks=knowledge_chunks,
                 )
             )
             emit(
@@ -453,6 +510,7 @@ def execute_run(
                 message="Cancelled before Skill execution",
                 error="Cancelled before Skill execution",
                 attached_rules=attached_rules,
+                knowledge_chunks=knowledge_chunks,
             )
             _call_cleanup(active_runner, skill_node.id)
             return mark_cancelled_remaining(
@@ -472,6 +530,7 @@ def execute_run(
                     inputMediaType=primary.mediaType,
                     inputs=envelopes,
                     rules=attached_rules,
+                    knowledgeChunks=knowledge_chunks,
                 ),
                 timeout_ms=opts.nodeTimeoutMs,
             )
@@ -483,6 +542,7 @@ def execute_run(
                     state=NodeRunState.TIMEOUT,
                     error=msg,
                     attachedRules=attached_rules,
+                    knowledgeChunks=knowledge_chunks,
                 )
             )
             emit(
@@ -491,6 +551,7 @@ def execute_run(
                 message=msg,
                 error=msg,
                 attached_rules=attached_rules,
+                knowledge_chunks=knowledge_chunks,
             )
             _call_cleanup(active_runner, skill_node.id)
             return mark_failed_remaining(
@@ -511,6 +572,7 @@ def execute_run(
                     state=NodeRunState.FAILED,
                     error=str(exc),
                     attachedRules=attached_rules,
+                    knowledgeChunks=knowledge_chunks,
                 )
             )
             emit(
@@ -519,6 +581,7 @@ def execute_run(
                 message=str(exc),
                 error=str(exc),
                 attached_rules=attached_rules,
+                knowledge_chunks=knowledge_chunks,
             )
             _call_cleanup(active_runner, skill_node.id)
             return mark_failed_remaining(
@@ -535,12 +598,24 @@ def execute_run(
 
         payload = skill_result.outputPayload
         media_type = skill_result.mediaType
-        rules_message = None
+        message_parts: list[str] = []
         if attached_rules:
             labels = ", ".join(rule.label for rule in attached_rules)
-            rules_message = (
+            message_parts.append(
                 f"Attached {len(attached_rules)} rule(s): {labels}"
             )
+        if attached_kbs:
+            citations = ", ".join(chunk.citation for chunk in knowledge_chunks)
+            if knowledge_chunks:
+                message_parts.append(
+                    f"Retrieved {len(knowledge_chunks)} KB chunk(s): {citations}"
+                )
+            else:
+                kb_labels = ", ".join(kb.label for kb in attached_kbs)
+                message_parts.append(
+                    f"Attached {len(attached_kbs)} KB(s) with no keyword matches: {kb_labels}"
+                )
+        skill_message = "; ".join(message_parts) if message_parts else None
         node_results.append(
             NodeRunResult(
                 nodeId=skill_node.id,
@@ -548,6 +623,7 @@ def execute_run(
                 output=payload,
                 mediaType=media_type,
                 attachedRules=attached_rules,
+                knowledgeChunks=knowledge_chunks,
             )
         )
         completed_outputs[skill_node.id] = (payload, media_type)
@@ -556,10 +632,11 @@ def execute_run(
         emit(
             RunEventType.COMPLETED,
             node_id=skill_node.id,
-            message=rules_message,
+            message=skill_message,
             output=payload,
             media_type=media_type,
             attached_rules=attached_rules,
+            knowledge_chunks=knowledge_chunks,
         )
 
     if cancel_check():
@@ -614,7 +691,7 @@ def execute_run(
                     message=reason,
                     error=reason,
                 )
-            finalize_unused_rules()
+            finalize_unused_resources()
             emit(
                 RunEventType.CANCELLED,
                 scope=RunEventScope.RUN,
@@ -648,7 +725,7 @@ def execute_run(
             media_type=terminal_media,
         )
 
-    finalize_unused_rules()
+    finalize_unused_resources()
     emit(
         RunEventType.COMPLETED,
         scope=RunEventScope.RUN,

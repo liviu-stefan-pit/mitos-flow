@@ -72,7 +72,9 @@ describe("AssetLibrary", () => {
     expect(screen.getByTestId("asset-library")).toBeInTheDocument();
     expect(screen.getByTestId("asset-library-dropzone")).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText(/No imported skills or rules yet/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/No imported skills, rules, or knowledge bases yet/i),
+      ).toBeInTheDocument();
     });
   });
 

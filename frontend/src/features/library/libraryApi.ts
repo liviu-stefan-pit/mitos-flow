@@ -127,8 +127,18 @@ export async function getLibraryAsset(assetId: string): Promise<LibraryAsset> {
   return parseJson<LibraryAsset>(response);
 }
 
-export function isLibraryMarkdownFilename(filename: string): boolean {
+export function isLibraryImportFilename(filename: string): boolean {
   const base = filename.replace(/\\/g, "/").split("/").pop() ?? filename;
   const lower = base.toLowerCase();
-  return lower.endsWith(".md") || lower.endsWith(".mdc") || lower.endsWith(".markdown");
+  return (
+    lower.endsWith(".md") ||
+    lower.endsWith(".mdc") ||
+    lower.endsWith(".markdown") ||
+    lower.endsWith(".txt")
+  );
+}
+
+/** @deprecated Prefer isLibraryImportFilename (Phase 19 adds .txt KB imports). */
+export function isLibraryMarkdownFilename(filename: string): boolean {
+  return isLibraryImportFilename(filename);
 }

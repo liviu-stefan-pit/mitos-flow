@@ -111,6 +111,8 @@ describe("uiGraphToDomainWorkflow", () => {
     });
     expect(byId["kb-1"].settings).toEqual({
       description: "Product handbook",
+      content: "",
+      libraryAssetId: null,
     });
     expect(byId["rules-1"].settings).toEqual({
       description: "Stay concise",

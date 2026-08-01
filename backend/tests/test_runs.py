@@ -127,8 +127,8 @@ def test_execute_simple_linear_exact_io_and_node_states():
     assert by_id["output-1"].output == EXPECTED_FAKE_OUTPUT
 
 
-def test_execute_valid_linear_resolves_attached_rules():
-    """KB stays skipped; attached Rules resolve into the Skill request (Phase 18)."""
+def test_execute_valid_linear_resolves_attached_rules_and_kb():
+    """Attached Rules resolve; attached empty KB completes with no chunks (Phase 19)."""
     workflow = Workflow.model_validate(_load_fixture("valid_linear.json"))
     result = execute_run(workflow)
 
@@ -137,10 +137,11 @@ def test_execute_valid_linear_resolves_attached_rules():
     assert result.output == expected
 
     by_id = {r.nodeId: r for r in result.nodeResults}
-    assert by_id["kb-1"].state.value == "skipped"
+    assert by_id["kb-1"].state.value == "completed"
     assert by_id["rules-1"].state.value == "completed"
     assert by_id["skill-1"].output == expected
     assert by_id["skill-1"].attachedRules[0].rulesNodeId == "rules-1"
+    assert by_id["skill-1"].knowledgeChunks == []
     assert by_id["output-1"].output == expected
 
 

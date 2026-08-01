@@ -8,10 +8,12 @@ from dataclasses import dataclass
 from mitos_api.domain.workflow import (
     ArtifactOutputMode,
     ArtifactOutputNodeSettings,
+    AttachedKnowledgeBase,
     AttachedRule,
     EdgeKind,
     InputEnvelope,
     JoinPolicy,
+    KnowledgeBaseNodeSettings,
     NodeKind,
     Port,
     PortDirection,
@@ -504,7 +506,7 @@ def collect_attached_rules(
     attach to one Skill. Duplicate edges to the same Rules node are collapsed
     so rule content is never duplicated in the runner request. Order is by
     Rules node id for deterministic FakeRunner / Cursor prompt assembly.
-    Knowledge Base attachments are ignored here (Phase 19).
+    Knowledge Base attachments are handled separately (Phase 19).
     """
     nodes_by_id = {node.id: node for node in workflow.nodes}
     seen: dict[str, WorkflowNode] = {}
@@ -530,6 +532,47 @@ def collect_attached_rules(
         attached.append(
             AttachedRule(
                 rulesNodeId=node.id,
+                label=node.label,
+                content=content,
+                order=index,
+            )
+        )
+    return attached
+
+
+def collect_attached_knowledge_bases(
+    skill: WorkflowNode,
+    workflow: Workflow,
+) -> list[AttachedKnowledgeBase]:
+    """
+    Resolve Knowledge Base → Skill resource attachments (Phase 19).
+
+    Many-to-many with dedupe by KB node id; order is by KB node id.
+    Rules attachments are ignored here (Phase 18).
+    """
+    nodes_by_id = {node.id: node for node in workflow.nodes}
+    seen: dict[str, WorkflowNode] = {}
+
+    for edge in workflow.edges:
+        if edge.kind is not EdgeKind.RESOURCE_ATTACHMENT:
+            continue
+        if edge.targetNodeId != skill.id:
+            continue
+        source = nodes_by_id.get(edge.sourceNodeId)
+        if source is None or source.kind is not NodeKind.KNOWLEDGE_BASE:
+            continue
+        if source.id not in seen:
+            seen[source.id] = source
+
+    ordered = sorted(seen.values(), key=lambda node: node.id)
+    attached: list[AttachedKnowledgeBase] = []
+    for index, node in enumerate(ordered):
+        content = ""
+        if isinstance(node.settings, KnowledgeBaseNodeSettings):
+            content = node.settings.content
+        attached.append(
+            AttachedKnowledgeBase(
+                kbNodeId=node.id,
                 label=node.label,
                 content=content,
                 order=index,

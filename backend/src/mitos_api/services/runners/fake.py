@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 
-from mitos_api.domain.workflow import AttachedRule
+from mitos_api.domain.workflow import AttachedRule, CitedChunk
 from mitos_api.services.runners.base import SkillExecutionRequest, SkillExecutionResult
 
 
@@ -14,6 +14,16 @@ def _format_rules_suffix(rules: list[AttachedRule]) -> str:
         return ""
     parts = "|".join(f"{rule.rulesNodeId}={rule.content}" for rule in rules)
     return f"::rules[{parts}]"
+
+
+def _format_kb_suffix(chunks: list[CitedChunk]) -> str:
+    """Append ordered cited KB chunks so retrieval is visible in fake output / trace."""
+    if not chunks:
+        return ""
+    parts = "|".join(
+        f"{chunk.chunkId}:{chunk.citation}={chunk.text}" for chunk in chunks
+    )
+    return f"::kb[{parts}]"
 
 
 class FakeRunner:
@@ -29,6 +39,9 @@ class FakeRunner:
 
     Attached Rules (Phase 18+) append a deterministic suffix:
       …::rules[{rulesNodeId}={content}|…]
+
+    Retrieved KB chunks (Phase 19+) append after rules:
+      …::kb[{chunkId}:{citation}={text}|…]
     """
 
     def __init__(self, *, execute_delay_ms: int = 0) -> None:
@@ -42,13 +55,15 @@ class FakeRunner:
             time.sleep(self.execute_delay_ms / 1000.0)
 
         rules_suffix = _format_rules_suffix(request.rules)
+        kb_suffix = _format_kb_suffix(request.knowledgeChunks)
+        suffix = f"{rules_suffix}{kb_suffix}"
 
         if len(request.inputs) > 1:
             parts = "|".join(
                 f"{envelope.port}={envelope.payload}"
                 for envelope in sorted(request.inputs, key=lambda item: item.port)
             )
-            output = f"fake::{request.skillLabel}::{parts}{rules_suffix}"
+            output = f"fake::{request.skillLabel}::{parts}{suffix}"
             media_type = next(
                 (e.mediaType for e in sorted(request.inputs, key=lambda i: i.port)),
                 request.inputMediaType or "text/plain",
@@ -62,7 +77,7 @@ class FakeRunner:
             payload = request.inputPayload
             media_type = request.inputMediaType or "text/plain"
 
-        output = f"fake::{request.skillLabel}::{payload}{rules_suffix}"
+        output = f"fake::{request.skillLabel}::{payload}{suffix}"
         return SkillExecutionResult(outputPayload=output, mediaType=media_type)
 
     def cleanup(self, skill_node_id: str) -> None:

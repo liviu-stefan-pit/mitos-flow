@@ -123,11 +123,13 @@ def infer_asset_kind(
     *,
     explicit: AssetKind | None = None,
 ) -> tuple[AssetKind | None, list[ValidationIssue]]:
-    """Infer skill vs rules from filename / frontmatter, or use explicit kind."""
+    """Infer skill / rules / KB from filename / frontmatter, or use explicit kind."""
     if explicit is not None:
         return explicit, []
 
     base = _basename(filename).lower()
+    if base.endswith(".txt"):
+        return AssetKind.KNOWLEDGE_BASE, []
     if base == "skill.md":
         return AssetKind.SKILL, []
     if base.endswith(".mdc"):
@@ -144,13 +146,17 @@ def infer_asset_kind(
     if has_rules_keys or (has_description and not has_name):
         return AssetKind.RULES, []
 
+    # Plain .md / .markdown without Skill/Rules cues → Knowledge Base (Phase 19).
+    if base.endswith((".md", ".markdown")):
+        return AssetKind.KNOWLEDGE_BASE, []
+
     return None, [
         ValidationIssue(
             code="ambiguous_kind",
             message=(
-                "Could not determine whether this file is a Skill or Rules asset. "
-                "Provide kind explicitly, use SKILL.md / .mdc naming, or include "
-                "distinguishing frontmatter."
+                "Could not determine whether this file is a Skill, Rules, or "
+                "Knowledge Base asset. Provide kind explicitly, use SKILL.md / "
+                ".mdc / .txt naming, or include distinguishing frontmatter."
             ),
         )
     ]
@@ -264,13 +270,95 @@ def _normalize_rules(
     )
 
 
+def _normalize_knowledge_base(
+    parsed: ParsedDocument,
+    filename: str,
+) -> tuple[NormalizedPreview | None, list[ValidationIssue]]:
+    """Normalize a .txt / .md KB document (no required frontmatter)."""
+    base = _basename(filename).lower()
+    if not (
+        base.endswith(".txt")
+        or base.endswith(".md")
+        or base.endswith(".markdown")
+    ):
+        return None, [
+            ValidationIssue(
+                code="unsupported_extension",
+                message=(
+                    "Knowledge Base imports accept .txt and .md files only "
+                    f"(got '{_basename(filename)}')."
+                ),
+            )
+        ]
+
+    fm = dict(parsed.frontmatter)
+    raw_name = fm.get("name")
+    if isinstance(raw_name, str) and raw_name.strip():
+        name = raw_name.strip()
+    else:
+        stem = _stem(filename).strip()
+        if not stem:
+            return None, [
+                ValidationIssue(
+                    code="missing_name",
+                    message="Could not derive a Knowledge Base name from the filename.",
+                )
+            ]
+        name = stem
+
+    description = ""
+    raw_description = fm.get("description")
+    if isinstance(raw_description, str):
+        description = raw_description.strip()
+
+    # For KB, keep the full document (frontmatter + body) as searchable content
+    # when there was no frontmatter; otherwise use the body after the fence.
+    body = parsed.body if parsed.has_frontmatter else (
+        parsed.body if parsed.body else ""
+    )
+    if not body.strip():
+        return None, [
+            ValidationIssue(
+                code="empty_kb",
+                message="Knowledge Base file has no content to index.",
+            )
+        ]
+
+    return (
+        NormalizedPreview(
+            kind=AssetKind.KNOWLEDGE_BASE,
+            name=name,
+            description=description,
+            frontmatter=fm,
+            body=body,
+            original_filename=_basename(filename),
+        ),
+        [],
+    )
+
+
 def normalize_document(
     content: str,
     filename: str,
     *,
     kind: AssetKind | None = None,
 ) -> tuple[NormalizedPreview | None, list[ValidationIssue]]:
-    """Parse + normalize a skill/rules Markdown file for preview or import."""
+    """Parse + normalize a skill/rules/KB file for preview or import."""
+    base = _basename(filename).lower()
+
+    # .txt is KB-only — reject other kinds early with a clear message.
+    if base.endswith(".txt"):
+        if kind is not None and kind is not AssetKind.KNOWLEDGE_BASE:
+            return None, [
+                ValidationIssue(
+                    code="kind_extension_mismatch",
+                    message=(
+                        ".txt files can only be imported as Knowledge Base assets."
+                    ),
+                )
+            ]
+        kind = AssetKind.KNOWLEDGE_BASE
+
     parsed, parse_errors = parse_frontmatter(content)
     if parse_errors or parsed is None:
         return None, parse_errors
@@ -283,4 +371,6 @@ def normalize_document(
 
     if inferred is AssetKind.SKILL:
         return _normalize_skill(parsed, filename)
-    return _normalize_rules(parsed, filename)
+    if inferred is AssetKind.RULES:
+        return _normalize_rules(parsed, filename)
+    return _normalize_knowledge_base(parsed, filename)

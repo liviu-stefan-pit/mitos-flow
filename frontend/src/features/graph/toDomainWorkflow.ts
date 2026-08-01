@@ -135,6 +135,9 @@ function settingsFromUiData(kind: NodeKind, data: unknown): NodeSettings {
       const kb = record as Partial<KnowledgeBaseNodeData>;
       return {
         description: typeof kb.description === "string" ? kb.description : "",
+        content: typeof kb.content === "string" ? kb.content : "",
+        libraryAssetId:
+          typeof kb.libraryAssetId === "string" ? kb.libraryAssetId : null,
       };
     }
     case "rules": {

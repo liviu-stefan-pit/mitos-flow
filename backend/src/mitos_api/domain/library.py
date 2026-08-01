@@ -13,6 +13,7 @@ from mitos_api.domain.workflow import ValidationIssue
 class AssetKind(str, Enum):
     SKILL = "skill"
     RULES = "rules"
+    KNOWLEDGE_BASE = "knowledgeBase"
 
 
 class LibraryAssetManifest(BaseModel):

@@ -3,7 +3,7 @@
 > Running log of completed work. Update after each phase.
 
 **Last updated:** 2026-08-01  
-**Current phase:** 19 (next)
+**Current phase:** 20 (next)
 
 ---
 
@@ -30,6 +30,7 @@
 | 16 | 2026-07-29 | Cancel, per-node timeout, cleanup, branch failure |
 | 17 | 2026-07-29 | Skill/Rules Markdown import into managed local library |
 | 18 | 2026-08-01 | Attach Rules to Skills (many-to-many, ordered, traced) |
+| 19 | 2026-08-01 | Basic KB resources: import, attach, keyword retrieval + citations |
 
 ---
 
@@ -281,6 +282,26 @@
 
 ---
 
+### Phase 19 — Basic KB resources without embeddings
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- Library `knowledgeBase` asset kind: import `.txt` / `.md` into managed `kb/` (preview/confirm, original + manifest)
+- Plain `.md` without Skill/Rules cues infers as KB; `.txt` is KB-only
+- KB node settings: `content` + optional `libraryAssetId`; inspector apply-from-library
+- `collect_attached_knowledge_bases` — many-to-many, ordered by KB node id, duplicate edges collapsed
+- Deterministic keyword retrieval (`services/kb/retrieval.py`): paragraph chunking, stopword-aware overlap score, default top-K=5 (Phase 20 will expose per-attachment controls)
+- Cited chunks (`CitedChunk` with `chunkId`, `citation`, `score`) on `SkillExecutionRequest` / `NodeRunResult` / SSE events
+- FakeRunner appends `::kb[{chunkId}:{citation}={text}|…]`; Activity timeline lists citations
+- Attachment isolation: each Skill retrieves only from its attached KBs
+- Unattached KB nodes stay `skipped`; attached empty KB completes with zero chunks
+- Gate fixtures/tests: `kb_one_skill`, `kb_isolation`, `many_kbs_one_skill`, txt/md import
+- Backend tests: 88 passing (9 new in `test_kb_attach.py`); frontend: 65 passing; `tsc -b --noEmit` clean
+- **Manual check:** Attach a KB with product text to a Skill; run; Activity / output shows cited chunk(s)
+
+---
+
 ## Known issues
 
 _None._
@@ -289,4 +310,4 @@ _None._
 
 ## Next up
 
-- Phase 19: Basic KB resources without embeddings
+- Phase 20: KB retrieval controls

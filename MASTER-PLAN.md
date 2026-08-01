@@ -3,7 +3,7 @@
 > **Purpose of this document:** Single source of truth for what Mitos Flow is, how it should be built, and which phase is done. Update checkboxes as phases complete. Point every implementation chat at this file first.
 
 **Last updated:** 2026-08-01  
-**Current phase:** 19 (next)  
+**Current phase:** 20 (next)  
 **Stack:** Local React/Vite frontend + FastAPI backend · Cursor CLI first · Fake runner before real CLI
 
 ---
@@ -255,7 +255,7 @@ Rules:
   - **Gate:** One rule → many skills; many rules → one skill; no duplication
   - **Manual check:** Attach two rules to one Skill; run shows both in trace
 
-- [ ] **Phase 19 — Basic KB resources without embeddings**
+- [x] **Phase 19 — Basic KB resources without embeddings**
   - Import `.txt` and `.md` into managed KB; many-to-many Skill attachment
   - Deterministic full-text/keyword retrieval only (no PDF, Office, embeddings)
   - **Gate:** Retrieval returns cited chunks; attachment isolation enforced
@@ -433,7 +433,7 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 16 | 2026-07-29 | Cancel, timeout, cleanup hooks, branch failure reporting |
 | 17 | 2026-07-29 | Managed library import: preview/confirm, original+manifest, malformed frontmatter |
 | 18 | 2026-08-01 | Rules→Skill many-to-many resolve; ordered rules in runner request + run trace |
-| 19 | | |
+| 19 | 2026-08-01 | KB import (.txt/.md) + keyword retrieval with cited chunks; attachment isolation |
 | 20 | | |
 | 21 | | |
 | 22 | | |

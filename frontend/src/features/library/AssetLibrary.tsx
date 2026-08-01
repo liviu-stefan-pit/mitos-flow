@@ -13,7 +13,7 @@ import type {
 } from "../../domain/library";
 import {
   importLibraryFile,
-  isLibraryMarkdownFilename,
+  isLibraryImportFilename,
   listLibraryAssets,
   LibraryApiError,
   previewLibraryFile,
@@ -45,6 +45,7 @@ function inferKindHint(filename: string): AssetKind | null {
   const base = filename.replace(/\\/g, "/").split("/").pop()?.toLowerCase() ?? "";
   if (base === "skill.md") return "skill";
   if (base.endsWith(".mdc")) return "rules";
+  if (base.endsWith(".txt")) return "knowledgeBase";
   return null;
 }
 
@@ -128,7 +129,7 @@ export function AssetLibrary() {
       const rejected: string[] = [];
 
       for (const file of files) {
-        if (!isLibraryMarkdownFilename(file.name)) {
+        if (!isLibraryImportFilename(file.name)) {
           rejected.push(file.name);
           continue;
         }
@@ -142,7 +143,7 @@ export function AssetLibrary() {
 
       if (rejected.length > 0) {
         showStatus(
-          `Skipped non-Markdown file(s): ${rejected.join(", ")}. Use .md or .mdc.`,
+          `Skipped unsupported file(s): ${rejected.join(", ")}. Use .md, .mdc, or .txt.`,
         );
       }
       if (accepted.length === 0) return;
@@ -273,14 +274,14 @@ export function AssetLibrary() {
             }
           }}
         >
-          Drop Cursor skill / rules Markdown files here
+          Drop skill / rules / KB files here
           <div className="asset-library-dropzone-hint">
-            .md / .mdc — preview, then confirm import
+            .md / .mdc / .txt — preview, then confirm import
           </div>
           <input
             ref={inputRef}
             type="file"
-            accept=".md,.mdc,.markdown,text/markdown"
+            accept=".md,.mdc,.markdown,.txt,text/markdown,text/plain"
             multiple
             hidden
             data-testid="asset-library-file-input"
@@ -306,7 +307,9 @@ export function AssetLibrary() {
 
         <div className="asset-library-list" data-testid="asset-library-list">
           {assets.length === 0 ? (
-            <div className="asset-library-empty">No imported skills or rules yet.</div>
+            <div className="asset-library-empty">
+              No imported skills, rules, or knowledge bases yet.
+            </div>
           ) : (
             assets.map((asset) => (
               <div

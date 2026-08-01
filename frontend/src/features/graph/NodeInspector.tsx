@@ -98,8 +98,8 @@ export function NodeInspector({ node, onUpdateData }: NodeInspectorProps) {
       ) : null}
 
       {kind === "knowledgeBase" ? (
-        <DescriptionField
-          testId="inspector-description"
+        <KnowledgeBaseFields
+          nodeId={node.id}
           data={node.data as KnowledgeBaseNodeData}
           onPatch={(patch) => onUpdateData(node.id, patch)}
         />
@@ -204,6 +204,125 @@ function DescriptionField({
         onChange={(event) => onPatch({ description: event.target.value })}
       />
     </label>
+  );
+}
+
+function KnowledgeBaseFields({
+  nodeId,
+  data,
+  onPatch,
+}: {
+  nodeId: string;
+  data: KnowledgeBaseNodeData;
+  onPatch: (patch: Partial<KnowledgeBaseNodeData> & { label?: string }) => void;
+}) {
+  const [assets, setAssets] = useState<LibraryAssetSummary[]>([]);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
+  const selectedAssetId = data.libraryAssetId ?? "";
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result = await listLibraryAssets();
+        if (cancelled) return;
+        setAssets(
+          result.assets.filter((asset) => asset.kind === "knowledgeBase"),
+        );
+        setLibraryError(null);
+      } catch (err) {
+        if (cancelled) return;
+        setLibraryError(
+          err instanceof LibraryApiError
+            ? err.message
+            : "Could not load library knowledge bases.",
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [nodeId]);
+
+  const applyFromLibrary = async (assetId: string) => {
+    if (!assetId) {
+      onPatch({ libraryAssetId: null });
+      return;
+    }
+    setApplying(true);
+    try {
+      const asset = await getLibraryAsset(assetId);
+      onPatch({
+        label: asset.manifest.name,
+        description: asset.manifest.description,
+        content: asset.manifest.body,
+        libraryAssetId: asset.manifest.id,
+      });
+      setLibraryError(null);
+    } catch (err) {
+      setLibraryError(
+        err instanceof LibraryApiError
+          ? err.message
+          : "Could not load the selected knowledge base asset.",
+      );
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  return (
+    <>
+      <DescriptionField
+        testId="inspector-description"
+        data={data}
+        onPatch={(patch) => onPatch(patch)}
+      />
+      <label className="node-inspector-field">
+        <span>KB content</span>
+        <textarea
+          data-testid="inspector-kb-content"
+          rows={5}
+          value={data.content ?? ""}
+          onChange={(event) =>
+            onPatch({ content: event.target.value, libraryAssetId: null })
+          }
+        />
+      </label>
+      <label className="node-inspector-field">
+        <span>Apply from library</span>
+        <select
+          data-testid="inspector-kb-library"
+          value={selectedAssetId}
+          disabled={applying}
+          onChange={(event) => {
+            void applyFromLibrary(event.target.value);
+          }}
+        >
+          <option value="">— Manual / none —</option>
+          {assets.map((asset) => (
+            <option key={asset.id} value={asset.id}>
+              {asset.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {libraryError ? (
+        <p
+          className="node-inspector-hint"
+          role="alert"
+          data-testid="inspector-kb-library-error"
+        >
+          {libraryError}
+        </p>
+      ) : (
+        <p className="node-inspector-hint">
+          Attach this Knowledge Base to Skills with a dashed resource edge.
+          Keyword retrieval returns cited chunks into the Skill run request and
+          activity trace.
+        </p>
+      )}
+    </>
   );
 }
 

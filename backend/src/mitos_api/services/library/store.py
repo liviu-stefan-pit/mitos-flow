@@ -1,4 +1,4 @@
-"""Filesystem-backed managed local library store (Phase 17)."""
+"""Filesystem-backed managed local library store (Phase 17+)."""
 
 from __future__ import annotations
 
@@ -19,6 +19,12 @@ from mitos_api.services.library.frontmatter import NormalizedPreview
 
 DEFAULT_LIBRARY_DIRNAME = ".mitos-flow-library"
 
+_KIND_DIR = {
+    AssetKind.SKILL: "skills",
+    AssetKind.RULES: "rules",
+    AssetKind.KNOWLEDGE_BASE: "kb",
+}
+
 
 def default_library_root() -> Path:
     """
@@ -37,8 +43,17 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _original_filename_for(preview: NormalizedPreview) -> str:
+    lower = preview.original_filename.lower()
+    if lower.endswith(".txt"):
+        return "original.txt"
+    if lower.endswith(".mdc"):
+        return "original.mdc"
+    return "original.md"
+
+
 class LibraryStore:
-    """Persist original Markdown + normalized manifest under a managed root."""
+    """Persist original file + normalized manifest under a managed root."""
 
     def __init__(self, root: Path | None = None) -> None:
         self._root = (root if root is not None else default_library_root()).resolve()
@@ -50,11 +65,11 @@ class LibraryStore:
 
     def _ensure_root(self) -> None:
         self._root.mkdir(parents=True, exist_ok=True)
-        (self._root / "skills").mkdir(exist_ok=True)
-        (self._root / "rules").mkdir(exist_ok=True)
+        for dirname in _KIND_DIR.values():
+            (self._root / dirname).mkdir(exist_ok=True)
 
     def _kind_dir(self, kind: AssetKind) -> Path:
-        return self._root / ("skills" if kind is AssetKind.SKILL else "rules")
+        return self._root / _KIND_DIR[kind]
 
     def _asset_dir(self, kind: AssetKind, asset_id: str) -> Path:
         return self._kind_dir(kind) / asset_id
@@ -73,9 +88,7 @@ class LibraryStore:
             asset_dir = self._asset_dir(preview.kind, aid)
             asset_dir.mkdir(parents=True, exist_ok=False)
 
-            original_name = "original.mdc" if preview.original_filename.lower().endswith(
-                ".mdc"
-            ) else "original.md"
+            original_name = _original_filename_for(preview)
             original_path = asset_dir / original_name
             original_path.write_text(original_content, encoding="utf-8")
 
@@ -99,7 +112,7 @@ class LibraryStore:
         with self._lock:
             self._ensure_root()
             summaries: list[LibraryAssetSummary] = []
-            for kind in (AssetKind.SKILL, AssetKind.RULES):
+            for kind in (AssetKind.SKILL, AssetKind.RULES, AssetKind.KNOWLEDGE_BASE):
                 kind_dir = self._kind_dir(kind)
                 if not kind_dir.exists():
                     continue
@@ -130,7 +143,7 @@ class LibraryStore:
     def get(self, asset_id: str) -> LibraryAsset | None:
         with self._lock:
             self._ensure_root()
-            for kind in (AssetKind.SKILL, AssetKind.RULES):
+            for kind in (AssetKind.SKILL, AssetKind.RULES, AssetKind.KNOWLEDGE_BASE):
                 asset_dir = self._asset_dir(kind, asset_id)
                 manifest_path = asset_dir / "manifest.json"
                 if not manifest_path.exists():
@@ -142,7 +155,7 @@ class LibraryStore:
                 except (OSError, json.JSONDecodeError, ValueError):
                     return None
                 original: str | None = None
-                for candidate in ("original.md", "original.mdc"):
+                for candidate in ("original.md", "original.mdc", "original.txt"):
                     path = asset_dir / candidate
                     if path.exists():
                         original = path.read_text(encoding="utf-8")
@@ -157,7 +170,7 @@ class LibraryStore:
         with self._lock:
             if not self._root.exists():
                 return
-            for kind in (AssetKind.SKILL, AssetKind.RULES):
+            for kind in (AssetKind.SKILL, AssetKind.RULES, AssetKind.KNOWLEDGE_BASE):
                 kind_dir = self._kind_dir(kind)
                 if not kind_dir.exists():
                     continue

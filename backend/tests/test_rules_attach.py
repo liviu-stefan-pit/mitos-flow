@@ -143,9 +143,11 @@ def test_attached_empty_rules_still_complete_and_appear_on_skill():
 
     assert result.status == "completed"
     by_id = {r.nodeId: r for r in result.nodeResults}
-    assert by_id["kb-1"].state.value == "skipped"
+    # KB is attached but has empty content → completed with no keyword matches.
+    assert by_id["kb-1"].state.value == "completed"
     assert by_id["rules-1"].state.value == "completed"
     assert by_id["skill-1"].attachedRules[0].rulesNodeId == "rules-1"
+    assert by_id["skill-1"].knowledgeChunks == []
     assert by_id["skill-1"].output == (
         "fake::Draft::Hello from input::rules[rules-1=]"
     )

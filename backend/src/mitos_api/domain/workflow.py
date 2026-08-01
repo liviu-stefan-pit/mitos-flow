@@ -94,6 +94,8 @@ class KnowledgeBaseNodeSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     description: str = ""
+    content: str = ""
+    libraryAssetId: str | None = None
 
 
 class RulesNodeSettings(BaseModel):
@@ -116,6 +118,40 @@ class AttachedRule(BaseModel):
     rulesNodeId: str = Field(min_length=1)
     label: str
     content: str = ""
+    order: int = Field(ge=0)
+
+
+class AttachedKnowledgeBase(BaseModel):
+    """
+    One Knowledge Base node resolved onto a Skill before retrieval (Phase 19+).
+
+    ``order`` is the stable index after deterministic sort by KB node id.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    kbNodeId: str = Field(min_length=1)
+    label: str
+    content: str = ""
+    order: int = Field(ge=0)
+
+
+class CitedChunk(BaseModel):
+    """
+    One retrieved KB chunk with citation metadata (Phase 19+).
+
+    Produced by deterministic full-text/keyword retrieval — no embeddings.
+    ``order`` is the rank within the Skill's retrieval result list.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    chunkId: str = Field(min_length=1)
+    kbNodeId: str = Field(min_length=1)
+    kbLabel: str
+    text: str
+    score: float = Field(ge=0)
+    citation: str = Field(min_length=1)
     order: int = Field(ge=0)
 
 

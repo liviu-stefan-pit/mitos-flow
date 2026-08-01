@@ -1,0 +1,109 @@
+{
+  "metadata": {
+    "name": "KB attachment isolation",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "kind": "input",
+      "label": "Brief",
+      "position": { "x": 0, "y": 0 },
+      "settings": {
+        "mediaType": "text/plain",
+        "content": "Tell me about alpha widgets and beta modules"
+      }
+    },
+    {
+      "id": "skill-a",
+      "kind": "skill",
+      "label": "AlphaSkill",
+      "position": { "x": 200, "y": 0 },
+      "settings": {
+        "description": "Uses alpha KB only",
+        "joinPolicy": "wait_for_all"
+      }
+    },
+    {
+      "id": "skill-b",
+      "kind": "skill",
+      "label": "BetaSkill",
+      "position": { "x": 400, "y": 0 },
+      "settings": {
+        "description": "Uses beta KB only",
+        "joinPolicy": "wait_for_all"
+      }
+    },
+    {
+      "id": "kb-alpha",
+      "kind": "knowledgeBase",
+      "label": "Alpha KB",
+      "position": { "x": 200, "y": 140 },
+      "settings": {
+        "description": "Alpha only",
+        "content": "Alpha widgets are blue and used for drafting.\n\nAlpha never mentions beta secrets."
+      }
+    },
+    {
+      "id": "kb-beta",
+      "kind": "knowledgeBase",
+      "label": "Beta KB",
+      "position": { "x": 400, "y": 140 },
+      "settings": {
+        "description": "Beta only",
+        "content": "Beta modules are green and used for polishing.\n\nBeta never mentions alpha secrets."
+      }
+    },
+    {
+      "id": "output-1",
+      "kind": "artifactOutput",
+      "label": "Save",
+      "position": { "x": 600, "y": 0 },
+      "settings": {
+        "mode": "pass-through"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-data-1",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-1",
+      "targetNodeId": "skill-a",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e-data-2",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-a",
+      "targetNodeId": "skill-b",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e-data-3",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-b",
+      "targetNodeId": "output-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e-res-alpha",
+      "kind": "resourceAttachment",
+      "sourceNodeId": "kb-alpha",
+      "targetNodeId": "skill-a",
+      "sourcePortId": "resource-out",
+      "targetPortId": "resource-in"
+    },
+    {
+      "id": "e-res-beta",
+      "kind": "resourceAttachment",
+      "sourceNodeId": "kb-beta",
+      "targetNodeId": "skill-b",
+      "sourcePortId": "resource-out",
+      "targetPortId": "resource-in"
+    }
+  ]
+}

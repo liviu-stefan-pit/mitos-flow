@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   importLibraryBatch,
   importLibraryFile,
+  isLibraryImportFilename,
   isLibraryMarkdownFilename,
   listLibraryAssets,
   previewLibraryFile,
@@ -21,10 +22,11 @@ description: Draft a concise project brief.
 `;
 
 describe("libraryApi", () => {
-  it("recognizes Markdown skill/rule filenames", () => {
+  it("recognizes skill/rule/KB import filenames", () => {
     expect(isLibraryMarkdownFilename("SKILL.md")).toBe(true);
     expect(isLibraryMarkdownFilename("rules.mdc")).toBe(true);
-    expect(isLibraryMarkdownFilename("notes.txt")).toBe(false);
+    expect(isLibraryImportFilename("notes.txt")).toBe(true);
+    expect(isLibraryImportFilename("notes.docx")).toBe(false);
   });
 
   it("previews a skill file via POST /api/library/preview", async () => {

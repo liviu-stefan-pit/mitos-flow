@@ -97,6 +97,28 @@ export function ActivityTimeline({
                   ))}
                 </ul>
               ) : null}
+              {event.knowledgeChunks && event.knowledgeChunks.length > 0 ? (
+                <ul
+                  className="activity-event-kb"
+                  data-testid="activity-event-kb"
+                >
+                  {event.knowledgeChunks.map((chunk) => (
+                    <li
+                      key={`${event.id}-${chunk.chunkId}`}
+                      data-testid="activity-cited-chunk"
+                      data-chunk-id={chunk.chunkId}
+                      data-kb-node-id={chunk.kbNodeId}
+                    >
+                      <strong>{chunk.citation}</strong>
+                      <span title={chunk.text}>
+                        {chunk.text.length > 60
+                          ? `${chunk.text.slice(0, 60)}…`
+                          : chunk.text}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               {event.error ? (
                 <span className="activity-event-error">{event.error}</span>
               ) : null}

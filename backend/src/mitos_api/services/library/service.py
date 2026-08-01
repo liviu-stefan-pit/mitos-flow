@@ -98,7 +98,7 @@ def get_library_asset(
 
 def allowed_upload_extension(filename: str) -> bool:
     lower = filename.replace("\\", "/").rsplit("/", 1)[-1].lower()
-    return lower.endswith((".md", ".mdc", ".markdown"))
+    return lower.endswith((".md", ".mdc", ".markdown", ".txt"))
 
 
 def coerce_kind(value: str | None) -> AssetKind | None:

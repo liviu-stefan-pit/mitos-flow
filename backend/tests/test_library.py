@@ -173,12 +173,23 @@ def test_preview_malformed_via_api():
     assert body["errors"][0]["code"] == "malformed_frontmatter"
 
 
-def test_reject_non_markdown_extension():
+def test_reject_unsupported_extension():
+    response = client.post(
+        "/api/library/preview",
+        json={"filename": "notes.docx", "content": "hello", "kind": "rules"},
+    )
+    assert response.status_code == 400
+
+
+def test_txt_as_rules_rejected_with_kind_mismatch():
     response = client.post(
         "/api/library/preview",
         json={"filename": "notes.txt", "content": "hello", "kind": "rules"},
     )
-    assert response.status_code == 400
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is False
+    assert body["errors"][0]["code"] == "kind_extension_mismatch"
 
 
 def test_get_asset_round_trip(isolated_library: LibraryStore):

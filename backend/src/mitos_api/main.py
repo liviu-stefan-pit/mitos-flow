@@ -133,7 +133,10 @@ def _reject_disallowed_filename(filename: str) -> None:
     if not allowed_upload_extension(filename):
         raise HTTPException(
             status_code=400,
-            detail="Only Markdown skill/rule files (.md, .mdc, .markdown) can be imported.",
+            detail=(
+                "Only Markdown skill/rule files (.md, .mdc, .markdown) and "
+                "Knowledge Base files (.txt, .md) can be imported."
+            ),
         )
 
 

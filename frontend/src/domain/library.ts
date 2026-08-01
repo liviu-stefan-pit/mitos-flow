@@ -1,6 +1,6 @@
-/** Managed local Skill/Rules library types (Phase 17). */
+/** Managed local Skill/Rules/KB library types (Phases 17–19). */
 
-export type AssetKind = "skill" | "rules";
+export type AssetKind = "skill" | "rules" | "knowledgeBase";
 
 export type LibraryValidationIssue = {
   code: string;

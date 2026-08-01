@@ -18,7 +18,7 @@ from mitos_api.domain.run import (
     RunResponse,
     RunStatus,
 )
-from mitos_api.domain.workflow import AttachedRule, ValidationIssue
+from mitos_api.domain.workflow import AttachedRule, CitedChunk, ValidationIssue
 
 
 def _utc_now_iso() -> str:
@@ -109,6 +109,7 @@ class RunStore:
         media_type: str | None = None,
         error: str | None = None,
         attached_rules: list[AttachedRule] | None = None,
+        knowledge_chunks: list[CitedChunk] | None = None,
     ) -> RunEvent | None:
         record = self.get(run_id)
         if record is None:
@@ -146,6 +147,7 @@ class RunStore:
                 mediaType=media_type,
                 error=error,
                 attachedRules=list(attached_rules or []),
+                knowledgeChunks=list(knowledge_chunks or []),
                 timestamp=_utc_now_iso(),
             )
             record.events.append(event)
@@ -253,6 +255,7 @@ class RunStore:
             media_type: str | None = None,
             error: str | None = None,
             attached_rules: list[AttachedRule] | None = None,
+            knowledge_chunks: list[CitedChunk] | None = None,
         ) -> None:
             self.append_event(
                 run_id,
@@ -264,6 +267,7 @@ class RunStore:
                 media_type=media_type,
                 error=error,
                 attached_rules=attached_rules,
+                knowledge_chunks=knowledge_chunks,
             )
 
         return _emit

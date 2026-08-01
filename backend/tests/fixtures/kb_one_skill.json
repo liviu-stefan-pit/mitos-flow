@@ -1,0 +1,73 @@
+{
+  "metadata": {
+    "name": "KB attached to skill",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "kind": "input",
+      "label": "Brief",
+      "position": { "x": 0, "y": 0 },
+      "settings": {
+        "mediaType": "text/plain",
+        "content": "What is Mitos Flow and how do joins work?"
+      }
+    },
+    {
+      "id": "skill-1",
+      "kind": "skill",
+      "label": "Draft",
+      "position": { "x": 220, "y": 0 },
+      "settings": {
+        "description": "Answer from KB",
+        "joinPolicy": "wait_for_all"
+      }
+    },
+    {
+      "id": "kb-product",
+      "kind": "knowledgeBase",
+      "label": "Product docs",
+      "position": { "x": 220, "y": 140 },
+      "settings": {
+        "description": "Product overview",
+        "content": "Mitos Flow is a visual AI workflow builder.\n\nNamed inputs use wait-for-all joins so every required port must arrive before a Skill runs.\n\nUnrelated gardening tip: water tomatoes weekly."
+      }
+    },
+    {
+      "id": "output-1",
+      "kind": "artifactOutput",
+      "label": "Save",
+      "position": { "x": 440, "y": 0 },
+      "settings": {
+        "mode": "pass-through"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-data-1",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-1",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e-data-2",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-1",
+      "targetNodeId": "output-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e-res-kb",
+      "kind": "resourceAttachment",
+      "sourceNodeId": "kb-product",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "resource-out",
+      "targetPortId": "resource-in"
+    }
+  ]
+}

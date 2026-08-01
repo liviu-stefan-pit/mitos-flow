@@ -1,0 +1,99 @@
+{
+  "metadata": {
+    "name": "Many KBs one skill",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "kind": "input",
+      "label": "Brief",
+      "position": { "x": 0, "y": 0 },
+      "settings": {
+        "mediaType": "text/plain",
+        "content": "Need pricing and shipping details"
+      }
+    },
+    {
+      "id": "skill-1",
+      "kind": "skill",
+      "label": "Draft",
+      "position": { "x": 220, "y": 0 },
+      "settings": {
+        "description": "Uses two KBs",
+        "joinPolicy": "wait_for_all"
+      }
+    },
+    {
+      "id": "kb-a",
+      "kind": "knowledgeBase",
+      "label": "Pricing",
+      "position": { "x": 100, "y": 140 },
+      "settings": {
+        "description": "Prices",
+        "content": "Pricing starts at ten dollars per seat."
+      }
+    },
+    {
+      "id": "kb-b",
+      "kind": "knowledgeBase",
+      "label": "Shipping",
+      "position": { "x": 300, "y": 140 },
+      "settings": {
+        "description": "Ship",
+        "content": "Shipping takes three business days worldwide."
+      }
+    },
+    {
+      "id": "output-1",
+      "kind": "artifactOutput",
+      "label": "Save",
+      "position": { "x": 440, "y": 0 },
+      "settings": {
+        "mode": "pass-through"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-data-1",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-1",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e-data-2",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-1",
+      "targetNodeId": "output-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e-res-a",
+      "kind": "resourceAttachment",
+      "sourceNodeId": "kb-a",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "resource-out",
+      "targetPortId": "resource-in"
+    },
+    {
+      "id": "e-res-a-dup",
+      "kind": "resourceAttachment",
+      "sourceNodeId": "kb-a",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "resource-out",
+      "targetPortId": "resource-in"
+    },
+    {
+      "id": "e-res-b",
+      "kind": "resourceAttachment",
+      "sourceNodeId": "kb-b",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "resource-out",
+      "targetPortId": "resource-in"
+    }
+  ]
+}

@@ -44,6 +44,8 @@ export type SkillNodeSettings = {
 
 export type KnowledgeBaseNodeSettings = {
   description: string;
+  content: string;
+  libraryAssetId?: string | null;
 };
 
 export type RulesNodeSettings = {
@@ -133,7 +135,7 @@ export function defaultSettingsForKind(kind: NodeKind): NodeSettings {
     case "skill":
       return { description: "", joinPolicy: "wait_for_all" };
     case "knowledgeBase":
-      return { description: "" };
+      return { description: "", content: "", libraryAssetId: null };
     case "rules":
       return { description: "", content: "", libraryAssetId: null };
     case "artifactOutput":

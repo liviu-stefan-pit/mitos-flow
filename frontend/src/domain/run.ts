@@ -52,12 +52,23 @@ export type NodeRunResult = {
   mediaType?: string | null;
   error?: string | null;
   attachedRules?: AttachedRule[];
+  knowledgeChunks?: CitedChunk[];
 };
 
 export type AttachedRule = {
   rulesNodeId: string;
   label: string;
   content: string;
+  order: number;
+};
+
+export type CitedChunk = {
+  chunkId: string;
+  kbNodeId: string;
+  kbLabel: string;
+  text: string;
+  score: number;
+  citation: string;
   order: number;
 };
 
@@ -73,6 +84,7 @@ export type RunEvent = {
   mediaType?: string | null;
   error?: string | null;
   attachedRules?: AttachedRule[];
+  knowledgeChunks?: CitedChunk[];
   timestamp: string;
 };
 

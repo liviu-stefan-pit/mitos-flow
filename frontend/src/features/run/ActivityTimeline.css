@@ -124,7 +124,8 @@
   word-break: break-word;
 }
 
-.activity-event-rules {
+.activity-event-rules,
+.activity-event-kb {
   margin: 0.15rem 0 0;
   padding-left: 1rem;
   color: #4b5563;
@@ -133,12 +134,14 @@
   gap: 0.2rem;
 }
 
-.activity-event-rules li {
+.activity-event-rules li,
+.activity-event-kb li {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
 }
 
-.activity-event-rules strong {
+.activity-event-rules strong,
+.activity-event-kb strong {
   color: #1f2937;
 }

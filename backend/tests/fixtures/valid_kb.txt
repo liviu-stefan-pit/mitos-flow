@@ -1,0 +1,5 @@
+Mitos Flow is a visual AI workflow builder for chaining skills.
+
+Named inputs use wait-for-all joins so every required port must arrive.
+
+Cancellation stops the run before the next Skill starts.

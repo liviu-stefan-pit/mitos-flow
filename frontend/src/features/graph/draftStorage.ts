@@ -79,11 +79,21 @@ function normalizeNodeData(
         content: typeof record.content === "string" ? record.content : "",
       };
     case "skill":
+      return {
+        label,
+        description:
+          typeof record.description === "string" ? record.description : "",
+      };
     case "knowledgeBase":
       return {
         label,
         description:
           typeof record.description === "string" ? record.description : "",
+        content: typeof record.content === "string" ? record.content : "",
+        libraryAssetId:
+          typeof record.libraryAssetId === "string"
+            ? record.libraryAssetId
+            : null,
       };
     case "rules":
       return {

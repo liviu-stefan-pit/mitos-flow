@@ -23,6 +23,8 @@ export type SkillNodeData = {
 export type KnowledgeBaseNodeData = {
   label: string;
   description: string;
+  content: string;
+  libraryAssetId?: string | null;
 };
 
 export type RulesNodeData = {
@@ -51,7 +53,7 @@ export function defaultNodeData(kind: NodeKind, label: string): MitosNodeData {
     case "skill":
       return { label, description: "" };
     case "knowledgeBase":
-      return { label, description: "" };
+      return { label, description: "", content: "", libraryAssetId: null };
     case "rules":
       return { label, description: "", content: "", libraryAssetId: null };
     case "artifactOutput":

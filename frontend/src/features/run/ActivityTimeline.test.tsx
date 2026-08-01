@@ -48,3 +48,46 @@ describe("ActivityTimeline — attached rules (Phase 18)", () => {
     expect(screen.getByText("Attached 2 rule(s): Types, Tone")).toBeInTheDocument();
   });
 });
+
+describe("ActivityTimeline — cited KB chunks (Phase 19)", () => {
+  it("renders cited knowledge chunks from a Skill completed event", () => {
+    const events: RunEvent[] = [
+      {
+        id: "run-2:1",
+        seq: 1,
+        type: "completed",
+        scope: "node",
+        runId: "run-2",
+        nodeId: "skill-1",
+        message: "Retrieved 1 KB chunk(s): Product docs#0",
+        knowledgeChunks: [
+          {
+            chunkId: "kb-product:c0",
+            kbNodeId: "kb-product",
+            kbLabel: "Product docs",
+            text: "Mitos Flow is a visual AI workflow builder.",
+            score: 3,
+            citation: "Product docs#0",
+            order: 0,
+          },
+        ],
+        timestamp: "2026-08-01T00:00:00Z",
+      },
+    ];
+
+    render(
+      <ActivityTimeline
+        events={events}
+        selectedNodeId={null}
+        runStatus="completed"
+      />,
+    );
+
+    expect(screen.getByTestId("activity-event-kb")).toBeInTheDocument();
+    const chunks = screen.getAllByTestId("activity-cited-chunk");
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0]).toHaveAttribute("data-chunk-id", "kb-product:c0");
+    expect(chunks[0]).toHaveAttribute("data-kb-node-id", "kb-product");
+    expect(screen.getByText("Product docs#0")).toBeInTheDocument();
+  });
+});
