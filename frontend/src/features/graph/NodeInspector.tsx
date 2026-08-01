@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
-import type { Node } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
 import type { LibraryAssetSummary } from "../../domain/library";
+import {
+  DEFAULT_KB_THRESHOLD,
+  DEFAULT_KB_TOP_K,
+} from "../../domain/workflow";
 import {
   getLibraryAsset,
   LibraryApiError,
@@ -21,7 +25,10 @@ import "./NodeInspector.css";
 
 type NodeInspectorProps = {
   node: Node | null;
+  nodes: Node[];
+  edges: Edge[];
   onUpdateData: (nodeId: string, patch: Record<string, unknown>) => void;
+  onUpdateEdgeData: (edgeId: string, patch: Record<string, unknown>) => void;
 };
 
 function kindLabel(kind: NodeKind): string {
@@ -39,7 +46,13 @@ function kindLabel(kind: NodeKind): string {
   }
 }
 
-export function NodeInspector({ node, onUpdateData }: NodeInspectorProps) {
+export function NodeInspector({
+  node,
+  nodes,
+  edges,
+  onUpdateData,
+  onUpdateEdgeData,
+}: NodeInspectorProps) {
   if (!node) {
     return (
       <aside className="node-inspector" data-testid="node-inspector-empty">
@@ -92,8 +105,12 @@ export function NodeInspector({ node, onUpdateData }: NodeInspectorProps) {
 
       {kind === "skill" ? (
         <SkillFields
+          skillNodeId={node.id}
           data={node.data as SkillNodeData}
+          nodes={nodes}
+          edges={edges}
           onPatch={(patch) => onUpdateData(node.id, patch)}
+          onUpdateEdgeData={onUpdateEdgeData}
         />
       ) : null}
 
@@ -155,12 +172,71 @@ function InputFields({
 }
 
 function SkillFields({
+  skillNodeId,
   data,
+  nodes,
+  edges,
   onPatch,
+  onUpdateEdgeData,
 }: {
+  skillNodeId: string;
   data: SkillNodeData;
+  nodes: Node[];
+  edges: Edge[];
   onPatch: (patch: Partial<SkillNodeData>) => void;
+  onUpdateEdgeData: (edgeId: string, patch: Record<string, unknown>) => void;
 }) {
+  const kbAttachments = edges
+    .filter(
+      (edge) =>
+        edge.type === "resourceAttachment" && edge.target === skillNodeId,
+    )
+    .map((edge) => {
+      const source = nodes.find((node) => node.id === edge.source);
+      if (!source || nodeKindFromFlowType(source.type) !== "knowledgeBase") {
+        return null;
+      }
+      const edgeData =
+        typeof edge.data === "object" && edge.data !== null
+          ? (edge.data as Record<string, unknown>)
+          : {};
+      const topK =
+        typeof edgeData.topK === "number" &&
+        Number.isFinite(edgeData.topK) &&
+        edgeData.topK >= 1
+          ? Math.floor(edgeData.topK)
+          : DEFAULT_KB_TOP_K;
+      const threshold =
+        typeof edgeData.threshold === "number" &&
+        Number.isFinite(edgeData.threshold) &&
+        edgeData.threshold >= 0
+          ? edgeData.threshold
+          : DEFAULT_KB_THRESHOLD;
+      const label =
+        typeof (source.data as { label?: unknown }).label === "string"
+          ? (source.data as { label: string }).label
+          : source.id;
+      return { edgeId: edge.id, kbNodeId: source.id, label, topK, threshold };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+    // Dedupe by KB node id (first edge wins), stable by edge id.
+    .reduce<
+      {
+        edgeId: string;
+        kbNodeId: string;
+        label: string;
+        topK: number;
+        threshold: number;
+      }[]
+    >((acc, item) => {
+      if (acc.some((existing) => existing.kbNodeId === item.kbNodeId)) {
+        return acc;
+      }
+      acc.push(item);
+      return acc;
+    }, [])
+    .sort((a, b) => a.kbNodeId.localeCompare(b.kbNodeId));
+
   return (
     <>
       <label className="node-inspector-field">
@@ -180,6 +256,68 @@ function SkillFields({
         >
           wait_for_all
         </div>
+      </div>
+      <div
+        className="node-inspector-field"
+        data-testid="inspector-kb-attachments"
+      >
+        <span>KB retrieval controls</span>
+        {kbAttachments.length === 0 ? (
+          <p className="node-inspector-hint">
+            Attach a Knowledge Base with a dashed resource edge to set top-K
+            and score threshold for this Skill/KB link.
+          </p>
+        ) : (
+          <ul className="node-inspector-attachment-list">
+            {kbAttachments.map((attachment) => (
+              <li
+                key={attachment.edgeId}
+                className="node-inspector-attachment"
+                data-testid="inspector-kb-attachment"
+                data-kb-node-id={attachment.kbNodeId}
+                data-edge-id={attachment.edgeId}
+              >
+                <div className="node-inspector-attachment-label">
+                  {attachment.label}
+                </div>
+                <label className="node-inspector-field">
+                  <span>Top-K</span>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    data-testid="inspector-kb-topk"
+                    value={attachment.topK}
+                    onChange={(event) => {
+                      const parsed = Number(event.target.value);
+                      if (!Number.isFinite(parsed) || parsed < 1) return;
+                      onUpdateEdgeData(attachment.edgeId, {
+                        topK: Math.floor(parsed),
+                      });
+                    }}
+                  />
+                </label>
+                <label className="node-inspector-field">
+                  <span>Threshold</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    data-testid="inspector-kb-threshold"
+                    value={attachment.threshold}
+                    onChange={(event) => {
+                      const parsed = Number(event.target.value);
+                      if (!Number.isFinite(parsed) || parsed < 0) return;
+                      onUpdateEdgeData(attachment.edgeId, {
+                        threshold: parsed,
+                      });
+                    }}
+                  />
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </>
   );
@@ -318,8 +456,9 @@ function KnowledgeBaseFields({
       ) : (
         <p className="node-inspector-hint">
           Attach this Knowledge Base to Skills with a dashed resource edge.
-          Keyword retrieval returns cited chunks into the Skill run request and
-          activity trace.
+          Per-attachment top-K and threshold are edited on the Skill inspector.
+          Keyword retrieval returns cited chunks (with query) into the Skill run
+          request and activity trace.
         </p>
       )}
     </>

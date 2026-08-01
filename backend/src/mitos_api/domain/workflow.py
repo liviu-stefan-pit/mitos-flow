@@ -121,11 +121,26 @@ class AttachedRule(BaseModel):
     order: int = Field(ge=0)
 
 
+class ResourceAttachmentSettings(BaseModel):
+    """
+    Per resource-attachment edge controls (Phase 20+).
+
+    Meaningful for KB→Skill links: ``topK`` and ``threshold`` scope retrieval
+    to that Skill/KB attachment only. Rules attachments ignore these fields.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    topK: int = Field(default=5, ge=1)
+    threshold: float = Field(default=0.0, ge=0)
+
+
 class AttachedKnowledgeBase(BaseModel):
     """
     One Knowledge Base node resolved onto a Skill before retrieval (Phase 19+).
 
     ``order`` is the stable index after deterministic sort by KB node id.
+    ``topK`` / ``threshold`` come from the resource-attachment edge (Phase 20).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -134,6 +149,8 @@ class AttachedKnowledgeBase(BaseModel):
     label: str
     content: str = ""
     order: int = Field(ge=0)
+    topK: int = Field(default=5, ge=1)
+    threshold: float = Field(default=0.0, ge=0)
 
 
 class CitedChunk(BaseModel):
@@ -278,6 +295,7 @@ class WorkflowEdge(BaseModel):
     targetNodeId: str = Field(min_length=1)
     sourcePortId: str = Field(min_length=1)
     targetPortId: str = Field(min_length=1)
+    settings: ResourceAttachmentSettings | None = None
 
 
 class WorkflowMetadata(BaseModel):

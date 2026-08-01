@@ -81,7 +81,17 @@ export type WorkflowEdge = {
   targetNodeId: string;
   sourcePortId: string;
   targetPortId: string;
+  /** Phase 20: per KB→Skill attachment retrieval controls. */
+  settings?: ResourceAttachmentSettings | null;
 };
+
+export type ResourceAttachmentSettings = {
+  topK: number;
+  threshold: number;
+};
+
+export const DEFAULT_KB_TOP_K = 5;
+export const DEFAULT_KB_THRESHOLD = 0;
 
 export type WorkflowMetadata = {
   name: string;

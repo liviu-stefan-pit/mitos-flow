@@ -145,3 +145,16 @@
 .activity-event-kb strong {
   color: #1f2937;
 }
+
+.activity-event-query {
+  color: #1d4ed8;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+}
+
+.activity-chunk-id {
+  color: #6b7280;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.68rem;
+}

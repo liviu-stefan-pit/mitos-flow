@@ -1,0 +1,99 @@
+{
+  "metadata": {
+    "name": "Per-attachment topK on one skill",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "kind": "input",
+      "label": "Brief",
+      "position": { "x": 0, "y": 0 },
+      "settings": {
+        "mediaType": "text/plain",
+        "content": "pricing shipping seat dollars business days"
+      }
+    },
+    {
+      "id": "skill-1",
+      "kind": "skill",
+      "label": "Draft",
+      "position": { "x": 220, "y": 0 },
+      "settings": {
+        "description": "Two KBs with different controls",
+        "joinPolicy": "wait_for_all"
+      }
+    },
+    {
+      "id": "kb-pricing",
+      "kind": "knowledgeBase",
+      "label": "Pricing",
+      "position": { "x": 100, "y": 140 },
+      "settings": {
+        "description": "Prices",
+        "content": "Pricing starts at ten dollars per seat.\n\nEnterprise pricing adds twenty dollars per seat.\n\nVolume pricing discounts another five dollars."
+      }
+    },
+    {
+      "id": "kb-shipping",
+      "kind": "knowledgeBase",
+      "label": "Shipping",
+      "position": { "x": 300, "y": 140 },
+      "settings": {
+        "description": "Ship",
+        "content": "Shipping takes three business days worldwide.\n\nExpress shipping arrives in one business day.\n\nEconomy shipping needs five business days."
+      }
+    },
+    {
+      "id": "output-1",
+      "kind": "artifactOutput",
+      "label": "Save",
+      "position": { "x": 440, "y": 0 },
+      "settings": {
+        "mode": "pass-through"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-data-1",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-1",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e-data-2",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-1",
+      "targetNodeId": "output-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e-res-pricing",
+      "kind": "resourceAttachment",
+      "sourceNodeId": "kb-pricing",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "resource-out",
+      "targetPortId": "resource-in",
+      "settings": {
+        "topK": 1,
+        "threshold": 0
+      }
+    },
+    {
+      "id": "e-res-shipping",
+      "kind": "resourceAttachment",
+      "sourceNodeId": "kb-shipping",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "resource-out",
+      "targetPortId": "resource-in",
+      "settings": {
+        "topK": 2,
+        "threshold": 0
+      }
+    }
+  ]
+}

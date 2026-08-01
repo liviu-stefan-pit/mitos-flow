@@ -97,6 +97,14 @@ export function ActivityTimeline({
                   ))}
                 </ul>
               ) : null}
+              {event.knowledgeQuery ? (
+                <span
+                  className="activity-event-query"
+                  data-testid="activity-knowledge-query"
+                >
+                  Query: {event.knowledgeQuery}
+                </span>
+              ) : null}
               {event.knowledgeChunks && event.knowledgeChunks.length > 0 ? (
                 <ul
                   className="activity-event-kb"
@@ -110,6 +118,7 @@ export function ActivityTimeline({
                       data-kb-node-id={chunk.kbNodeId}
                     >
                       <strong>{chunk.citation}</strong>
+                      <span className="activity-chunk-id">{chunk.chunkId}</span>
                       <span title={chunk.text}>
                         {chunk.text.length > 60
                           ? `${chunk.text.slice(0, 60)}…`

@@ -110,6 +110,7 @@ class RunStore:
         error: str | None = None,
         attached_rules: list[AttachedRule] | None = None,
         knowledge_chunks: list[CitedChunk] | None = None,
+        knowledge_query: str | None = None,
     ) -> RunEvent | None:
         record = self.get(run_id)
         if record is None:
@@ -148,6 +149,7 @@ class RunStore:
                 error=error,
                 attachedRules=list(attached_rules or []),
                 knowledgeChunks=list(knowledge_chunks or []),
+                knowledgeQuery=knowledge_query,
                 timestamp=_utc_now_iso(),
             )
             record.events.append(event)
@@ -256,6 +258,7 @@ class RunStore:
             error: str | None = None,
             attached_rules: list[AttachedRule] | None = None,
             knowledge_chunks: list[CitedChunk] | None = None,
+            knowledge_query: str | None = None,
         ) -> None:
             self.append_event(
                 run_id,
@@ -268,6 +271,7 @@ class RunStore:
                 error=error,
                 attached_rules=attached_rules,
                 knowledge_chunks=knowledge_chunks,
+                knowledge_query=knowledge_query,
             )
 
         return _emit

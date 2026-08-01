@@ -3,7 +3,7 @@
 > Running log of completed work. Update after each phase.
 
 **Last updated:** 2026-08-01  
-**Current phase:** 20 (next)
+**Current phase:** 21 (next)
 
 ---
 
@@ -31,6 +31,7 @@
 | 17 | 2026-07-29 | Skill/Rules Markdown import into managed local library |
 | 18 | 2026-08-01 | Attach Rules to Skills (many-to-many, ordered, traced) |
 | 19 | 2026-08-01 | Basic KB resources: import, attach, keyword retrieval + citations |
+| 20 | 2026-08-01 | KB retrieval controls: per-attachment top-K/threshold + query in trace |
 
 ---
 
@@ -302,6 +303,23 @@
 
 ---
 
+### Phase 20 — KB retrieval controls
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- `ResourceAttachmentSettings` on KB→Skill resource edges: `topK` (default 5) + `threshold` (default 0)
+- `AttachedKnowledgeBase` carries per-link controls; retrieval applies them independently per Skill/KB attachment
+- Skill inspector lists attached KBs with editable top-K / threshold (writes to edge data; draft-persisted)
+- Run trace: `knowledgeQuery` on Skill `NodeRunResult` / SSE events; message includes query, chunk IDs, citations
+- Activity timeline renders query + chunk id + citation for retrieved chunks
+- Gate: changing one attachment's controls affects only that Skill/KB link (shared KB → two Skills with different top-K)
+- Gate fixtures/tests: `kb_retrieval_controls`, `kb_per_attachment_topk`, threshold filter, query-in-trace
+- Backend tests: 94 passing (6 new in `test_kb_retrieval_controls.py`); frontend: 67 passing; `tsc -b --noEmit` clean
+- **Manual check:** Attach KB to Skill; lower top-K in Skill inspector; run; Activity shows fewer cited chunks
+
+---
+
 ## Known issues
 
 _None._
@@ -310,4 +328,4 @@ _None._
 
 ## Next up
 
-- Phase 20: KB retrieval controls
+- Phase 21: Cursor capability probe

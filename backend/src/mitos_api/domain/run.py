@@ -85,6 +85,7 @@ class NodeRunResult(BaseModel):
     error: str | None = None
     attachedRules: list[AttachedRule] = Field(default_factory=list)
     knowledgeChunks: list[CitedChunk] = Field(default_factory=list)
+    knowledgeQuery: str | None = None
 
 
 class RunEvent(BaseModel):
@@ -104,6 +105,7 @@ class RunEvent(BaseModel):
     error: str | None = None
     attachedRules: list[AttachedRule] = Field(default_factory=list)
     knowledgeChunks: list[CitedChunk] = Field(default_factory=list)
+    knowledgeQuery: str | None = None
     timestamp: str
 
 

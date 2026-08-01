@@ -129,6 +129,28 @@ describe("uiGraphToDomainWorkflow", () => {
       sourcePortId: "data-out",
       targetPortId: "data-in",
     });
+    expect(result.workflow.edges[0].settings).toBeNull();
+    // Resource edges get default retrieval controls when edge data is absent.
+    const kbEdge = result.workflow.edges.find(
+      (edge) => edge.sourceNodeId === "kb-1",
+    );
+    expect(kbEdge?.settings).toEqual({ topK: 5, threshold: 0 });
+  });
+
+  it("maps per-attachment topK and threshold from KB resource edge data", () => {
+    const { nodes, edges } = sampleUiGraph();
+    const withControls = edges.map((edge) =>
+      edge.id === "e3"
+        ? { ...edge, data: { topK: 2, threshold: 1.5 } }
+        : edge,
+    );
+    const result = uiGraphToDomainWorkflow(nodes, withControls);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const kbEdge = result.workflow.edges.find(
+      (edge) => edge.sourceNodeId === "kb-1",
+    );
+    expect(kbEdge?.settings).toEqual({ topK: 2, threshold: 1.5 });
   });
 
   it("rejects unknown node types instead of dropping settings", () => {

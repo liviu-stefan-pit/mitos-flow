@@ -53,6 +53,7 @@ export type NodeRunResult = {
   error?: string | null;
   attachedRules?: AttachedRule[];
   knowledgeChunks?: CitedChunk[];
+  knowledgeQuery?: string | null;
 };
 
 export type AttachedRule = {
@@ -85,6 +86,7 @@ export type RunEvent = {
   error?: string | null;
   attachedRules?: AttachedRule[];
   knowledgeChunks?: CitedChunk[];
+  knowledgeQuery?: string | null;
   timestamp: string;
 };
 

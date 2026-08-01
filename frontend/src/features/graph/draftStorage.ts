@@ -29,6 +29,11 @@ export type DraftEdgeV1 = {
   sourceHandle?: string | null;
   targetHandle?: string | null;
   type?: string;
+  /** Phase 20: KB attachment retrieval controls (topK / threshold). */
+  data?: {
+    topK?: number;
+    threshold?: number;
+  };
 };
 
 export type WorkflowDraftV1 = {
@@ -140,6 +145,25 @@ function parseDraftEdge(value: unknown): DraftEdgeV1 | null {
   if (typeof value.source !== "string" || value.source.length === 0) return null;
   if (typeof value.target !== "string" || value.target.length === 0) return null;
 
+  let data: DraftEdgeV1["data"];
+  if (isRecord(value.data)) {
+    const topK =
+      typeof value.data.topK === "number" &&
+      Number.isFinite(value.data.topK) &&
+      value.data.topK >= 1
+        ? Math.floor(value.data.topK)
+        : undefined;
+    const threshold =
+      typeof value.data.threshold === "number" &&
+      Number.isFinite(value.data.threshold) &&
+      value.data.threshold >= 0
+        ? value.data.threshold
+        : undefined;
+    if (topK !== undefined || threshold !== undefined) {
+      data = { topK, threshold };
+    }
+  }
+
   return {
     id: value.id,
     source: value.source,
@@ -153,6 +177,7 @@ function parseDraftEdge(value: unknown): DraftEdgeV1 | null {
         ? value.targetHandle
         : undefined,
     type: typeof value.type === "string" ? value.type : undefined,
+    data,
   };
 }
 
@@ -256,14 +281,35 @@ export function toWorkflowDraft(
         data,
       };
     }),
-    edges: edges.map((edge) => ({
-      id: edge.id,
-      source: edge.source,
-      target: edge.target,
-      sourceHandle: edge.sourceHandle ?? null,
-      targetHandle: edge.targetHandle ?? null,
-      type: edge.type,
-    })),
+    edges: edges.map((edge) => {
+      const record =
+        typeof edge.data === "object" && edge.data !== null
+          ? (edge.data as Record<string, unknown>)
+          : {};
+      const topK =
+        typeof record.topK === "number" &&
+        Number.isFinite(record.topK) &&
+        record.topK >= 1
+          ? Math.floor(record.topK)
+          : undefined;
+      const threshold =
+        typeof record.threshold === "number" &&
+        Number.isFinite(record.threshold) &&
+        record.threshold >= 0
+          ? record.threshold
+          : undefined;
+      return {
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle ?? null,
+        targetHandle: edge.targetHandle ?? null,
+        type: edge.type,
+        ...(topK !== undefined || threshold !== undefined
+          ? { data: { topK, threshold } }
+          : {}),
+      };
+    }),
   };
 }
 
@@ -285,6 +331,7 @@ export function draftToReactFlow(draft: WorkflowDraftV1): {
       sourceHandle: edge.sourceHandle ?? undefined,
       targetHandle: edge.targetHandle ?? undefined,
       type: edge.type,
+      ...(edge.data ? { data: { ...edge.data } } : {}),
     })),
   };
 }

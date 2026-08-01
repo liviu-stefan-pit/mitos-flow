@@ -160,6 +160,27 @@ function WorkflowCanvasInner() {
     [setNodes],
   );
 
+  const handleUpdateEdgeData = useCallback(
+    (edgeId: string, patch: Record<string, unknown>) => {
+      setEdges((current) =>
+        current.map((edge) =>
+          edge.id === edgeId
+            ? {
+                ...edge,
+                data: {
+                  ...(typeof edge.data === "object" && edge.data !== null
+                    ? edge.data
+                    : {}),
+                  ...patch,
+                },
+              }
+            : edge,
+        ),
+      );
+    },
+    [setEdges],
+  );
+
   const clearCanvasAndDraft = useCallback(() => {
     setNodes([]);
     setEdges([]);
@@ -307,18 +328,26 @@ function WorkflowCanvasInner() {
         showFeedback(result.reason);
         return;
       }
+      const sourceNode = nodes.find((n) => n.id === connection.source);
+      const sourceKind = nodeKindFromFlowType(sourceNode?.type);
+      const edgeData =
+        result.edgeKind === "resourceAttachment" &&
+        sourceKind === "knowledgeBase"
+          ? { topK: 5, threshold: 0 }
+          : undefined;
       setEdges((current) =>
         addEdge(
           {
             ...connection,
             type: result.edgeKind,
             id: `${result.edgeKind}-${connection.source}-${connection.sourceHandle}-${connection.target}-${connection.targetHandle}-${Date.now()}`,
+            ...(edgeData ? { data: edgeData } : {}),
           },
           current,
         ),
       );
     },
-    [resolveConnection, setEdges, showFeedback],
+    [resolveConnection, setEdges, showFeedback, nodes],
   );
 
   const onConnectEnd = useCallback(
@@ -379,7 +408,13 @@ function WorkflowCanvasInner() {
         running={workflowRun.isLive}
         canRun={nodes.length > 0 && !workflowRun.isLive}
       />
-      <NodeInspector node={selectedNode} onUpdateData={handleUpdateNodeData} />
+      <NodeInspector
+        node={selectedNode}
+        nodes={nodes}
+        edges={edges}
+        onUpdateData={handleUpdateNodeData}
+        onUpdateEdgeData={handleUpdateEdgeData}
+      />
       <AssetLibrary />
       <ActivityTimeline
         events={workflowRun.events}

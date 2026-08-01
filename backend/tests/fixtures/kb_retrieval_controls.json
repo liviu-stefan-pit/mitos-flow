@@ -1,0 +1,107 @@
+{
+  "metadata": {
+    "name": "KB retrieval controls isolation",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "kind": "input",
+      "label": "Brief",
+      "position": { "x": 0, "y": 0 },
+      "settings": {
+        "mediaType": "text/plain",
+        "content": "widgets modules drafting polishing alpha beta"
+      }
+    },
+    {
+      "id": "skill-a",
+      "kind": "skill",
+      "label": "SkillA",
+      "position": { "x": 200, "y": 0 },
+      "settings": {
+        "description": "Low top-K attachment",
+        "joinPolicy": "wait_for_all"
+      }
+    },
+    {
+      "id": "skill-b",
+      "kind": "skill",
+      "label": "SkillB",
+      "position": { "x": 400, "y": 0 },
+      "settings": {
+        "description": "Higher top-K attachment",
+        "joinPolicy": "wait_for_all"
+      }
+    },
+    {
+      "id": "kb-shared",
+      "kind": "knowledgeBase",
+      "label": "Shared docs",
+      "position": { "x": 300, "y": 160 },
+      "settings": {
+        "description": "Multi-chunk shared KB",
+        "content": "Alpha widgets are blue and used for drafting.\n\nBeta modules are green and used for polishing.\n\nGamma gadgets help with drafting widgets and polishing modules.\n\nDelta devices store alpha beta widget module notes."
+      }
+    },
+    {
+      "id": "output-1",
+      "kind": "artifactOutput",
+      "label": "Save",
+      "position": { "x": 600, "y": 0 },
+      "settings": {
+        "mode": "pass-through"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-data-1",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-1",
+      "targetNodeId": "skill-a",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e-data-2",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-a",
+      "targetNodeId": "skill-b",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e-data-3",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-b",
+      "targetNodeId": "output-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e-res-a",
+      "kind": "resourceAttachment",
+      "sourceNodeId": "kb-shared",
+      "targetNodeId": "skill-a",
+      "sourcePortId": "resource-out",
+      "targetPortId": "resource-in",
+      "settings": {
+        "topK": 1,
+        "threshold": 0
+      }
+    },
+    {
+      "id": "e-res-b",
+      "kind": "resourceAttachment",
+      "sourceNodeId": "kb-shared",
+      "targetNodeId": "skill-b",
+      "sourcePortId": "resource-out",
+      "targetPortId": "resource-in",
+      "settings": {
+        "topK": 3,
+        "threshold": 0
+      }
+    }
+  ]
+}

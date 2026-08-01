@@ -49,8 +49,8 @@ describe("ActivityTimeline — attached rules (Phase 18)", () => {
   });
 });
 
-describe("ActivityTimeline — cited KB chunks (Phase 19)", () => {
-  it("renders cited knowledge chunks from a Skill completed event", () => {
+describe("ActivityTimeline — cited KB chunks (Phase 19–20)", () => {
+  it("renders query, chunk ids, and citations from a Skill completed event", () => {
     const events: RunEvent[] = [
       {
         id: "run-2:1",
@@ -59,7 +59,9 @@ describe("ActivityTimeline — cited KB chunks (Phase 19)", () => {
         scope: "node",
         runId: "run-2",
         nodeId: "skill-1",
-        message: "Retrieved 1 KB chunk(s): Product docs#0",
+        message:
+          "Query: What is Mitos Flow?; Retrieved 1 KB chunk(s) [kb-product:c0]: Product docs#0",
+        knowledgeQuery: "What is Mitos Flow?",
         knowledgeChunks: [
           {
             chunkId: "kb-product:c0",
@@ -83,11 +85,15 @@ describe("ActivityTimeline — cited KB chunks (Phase 19)", () => {
       />,
     );
 
+    expect(screen.getByTestId("activity-knowledge-query")).toHaveTextContent(
+      "Query: What is Mitos Flow?",
+    );
     expect(screen.getByTestId("activity-event-kb")).toBeInTheDocument();
     const chunks = screen.getAllByTestId("activity-cited-chunk");
     expect(chunks).toHaveLength(1);
     expect(chunks[0]).toHaveAttribute("data-chunk-id", "kb-product:c0");
     expect(chunks[0]).toHaveAttribute("data-kb-node-id", "kb-product");
     expect(screen.getByText("Product docs#0")).toBeInTheDocument();
+    expect(screen.getByText("kb-product:c0")).toBeInTheDocument();
   });
 });

@@ -1,8 +1,10 @@
 """
-Deterministic full-text / keyword KB retrieval (Phase 19).
+Deterministic full-text / keyword KB retrieval (Phases 19–20).
 
 No embeddings, no PDF/Office conversion. Chunks are paragraph-based with a
 fixed max size; scoring is keyword-overlap count against the Skill query.
+
+Phase 20: top-K and threshold are applied per KB attachment (Skill/KB link).
 """
 
 from __future__ import annotations
@@ -12,7 +14,7 @@ from dataclasses import dataclass
 
 from mitos_api.domain.workflow import AttachedKnowledgeBase, CitedChunk
 
-# Phase 19 defaults — Phase 20 makes top-K / threshold per-attachment controls.
+# Defaults when an attachment omits explicit controls.
 DEFAULT_TOP_K = 5
 DEFAULT_THRESHOLD = 0.0
 _MAX_CHUNK_CHARS = 480
@@ -141,44 +143,33 @@ def _hard_wrap(text: str) -> list[str]:
     return parts
 
 
-def retrieve_cited_chunks(
-    attached: list[AttachedKnowledgeBase],
-    query: str,
-    *,
-    top_k: int = DEFAULT_TOP_K,
-    threshold: float = DEFAULT_THRESHOLD,
+def _retrieve_one_attachment(
+    kb: AttachedKnowledgeBase,
+    query_tokens: set[str],
 ) -> list[CitedChunk]:
-    """
-    Keyword-overlap retrieval over attached KB documents only.
-
-    Attachment isolation is enforced by only scoring chunks from ``attached``.
-    Results are sorted by (-score, chunkId) then truncated to ``top_k``.
-    """
-    if top_k < 1 or not attached:
-        return []
-
-    query_tokens = tokenize(query)
-    if not query_tokens:
+    """Score and truncate chunks for a single Skill/KB attachment."""
+    top_k = kb.topK if kb.topK is not None else DEFAULT_TOP_K
+    threshold = kb.threshold if kb.threshold is not None else DEFAULT_THRESHOLD
+    if top_k < 1:
         return []
 
     scored: list[tuple[float, _RawChunk]] = []
-    for kb in attached:
-        for chunk in chunk_document(
-            kb_node_id=kb.kbNodeId,
-            kb_label=kb.label,
-            content=kb.content,
-        ):
-            chunk_tokens = tokenize(chunk.text)
-            overlap = query_tokens & chunk_tokens
-            score = float(len(overlap))
-            if score > threshold:
-                scored.append((score, chunk))
+    for chunk in chunk_document(
+        kb_node_id=kb.kbNodeId,
+        kb_label=kb.label,
+        content=kb.content,
+    ):
+        chunk_tokens = tokenize(chunk.text)
+        overlap = query_tokens & chunk_tokens
+        score = float(len(overlap))
+        if score > threshold:
+            scored.append((score, chunk))
 
     scored.sort(key=lambda item: (-item[0], item[1].chunk_id))
     selected = scored[:top_k]
 
     cited: list[CitedChunk] = []
-    for rank, (score, chunk) in enumerate(selected):
+    for score, chunk in selected:
         cited.append(
             CitedChunk(
                 chunkId=chunk.chunk_id,
@@ -187,9 +178,54 @@ def retrieve_cited_chunks(
                 text=chunk.text,
                 score=score,
                 citation=f"{chunk.kb_label}#{chunk.index}",
-                order=rank,
+                order=0,  # reassigned after merge
             )
         )
+    return cited
+
+
+def retrieve_cited_chunks(
+    attached: list[AttachedKnowledgeBase],
+    query: str,
+    *,
+    top_k: int | None = None,
+    threshold: float | None = None,
+) -> list[CitedChunk]:
+    """
+    Keyword-overlap retrieval over attached KB documents only.
+
+    Attachment isolation is enforced by only scoring chunks from ``attached``.
+    Each attachment applies its own ``topK`` / ``threshold`` (Phase 20).
+    Optional ``top_k`` / ``threshold`` kwargs override every attachment
+    (legacy test helper); when omitted, per-attachment controls win.
+    Results are merged in attachment order; ``order`` is the merged rank.
+    """
+    if not attached:
+        return []
+
+    query_tokens = tokenize(query)
+    if not query_tokens:
+        return []
+
+    # Optional global override for call sites that still pass top_k/threshold.
+    effective = attached
+    if top_k is not None or threshold is not None:
+        effective = [
+            kb.model_copy(
+                update={
+                    "topK": top_k if top_k is not None else kb.topK,
+                    "threshold": (
+                        threshold if threshold is not None else kb.threshold
+                    ),
+                }
+            )
+            for kb in attached
+        ]
+
+    cited: list[CitedChunk] = []
+    for kb in effective:
+        for chunk in _retrieve_one_attachment(kb, query_tokens):
+            cited.append(chunk.model_copy(update={"order": len(cited)}))
     return cited
 
 

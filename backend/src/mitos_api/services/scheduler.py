@@ -18,6 +18,7 @@ from mitos_api.domain.workflow import (
     Port,
     PortDirection,
     PortKind,
+    ResourceAttachmentSettings,
     RulesNodeSettings,
     SkillNodeSettings,
     ValidationIssue,
@@ -545,13 +546,16 @@ def collect_attached_knowledge_bases(
     workflow: Workflow,
 ) -> list[AttachedKnowledgeBase]:
     """
-    Resolve Knowledge Base → Skill resource attachments (Phase 19).
+    Resolve Knowledge Base → Skill resource attachments (Phases 19–20).
 
     Many-to-many with dedupe by KB node id; order is by KB node id.
     Rules attachments are ignored here (Phase 18).
+    Per-attachment ``topK`` / ``threshold`` come from the first resource edge
+    for that KB→Skill link (duplicate edges collapse; first edge wins).
     """
     nodes_by_id = {node.id: node for node in workflow.nodes}
-    seen: dict[str, WorkflowNode] = {}
+    # First edge wins for both content source and retrieval controls.
+    seen: dict[str, tuple[WorkflowNode, ResourceAttachmentSettings | None]] = {}
 
     for edge in workflow.edges:
         if edge.kind is not EdgeKind.RESOURCE_ATTACHMENT:
@@ -562,20 +566,29 @@ def collect_attached_knowledge_bases(
         if source is None or source.kind is not NodeKind.KNOWLEDGE_BASE:
             continue
         if source.id not in seen:
-            seen[source.id] = source
+            seen[source.id] = (source, edge.settings)
 
-    ordered = sorted(seen.values(), key=lambda node: node.id)
+    ordered = sorted(seen.items(), key=lambda item: item[0])
     attached: list[AttachedKnowledgeBase] = []
-    for index, node in enumerate(ordered):
+    defaults = ResourceAttachmentSettings()
+    for index, (_kb_id, (node, edge_settings)) in enumerate(ordered):
         content = ""
         if isinstance(node.settings, KnowledgeBaseNodeSettings):
             content = node.settings.content
+        top_k = edge_settings.topK if edge_settings is not None else defaults.topK
+        threshold = (
+            edge_settings.threshold
+            if edge_settings is not None
+            else defaults.threshold
+        )
         attached.append(
             AttachedKnowledgeBase(
                 kbNodeId=node.id,
                 label=node.label,
                 content=content,
                 order=index,
+                topK=top_k,
+                threshold=threshold,
             )
         )
     return attached

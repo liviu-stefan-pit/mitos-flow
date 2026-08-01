@@ -6,10 +6,13 @@ import type { Edge, Node } from "@xyflow/react";
 import {
   defaultPortsForKind,
   defaultSettingsForKind,
+  DEFAULT_KB_THRESHOLD,
+  DEFAULT_KB_TOP_K,
   type ArtifactOutputMode,
   type EdgeKind,
   type NodeKind,
   type NodeSettings,
+  type ResourceAttachmentSettings,
   type Workflow,
   type WorkflowEdge,
   type WorkflowNode,
@@ -89,6 +92,7 @@ export function uiGraphToDomainWorkflow(
       targetNodeId: edge.target,
       sourcePortId: edge.sourceHandle,
       targetPortId: edge.targetHandle,
+      settings: resourceSettingsFromEdgeData(edge.type, edge.data),
     });
   }
 
@@ -103,6 +107,32 @@ export function uiGraphToDomainWorkflow(
       edges: domainEdges,
     },
   };
+}
+
+function resourceSettingsFromEdgeData(
+  edgeType: string,
+  data: unknown,
+): ResourceAttachmentSettings | null {
+  if (edgeType !== "resourceAttachment") {
+    return null;
+  }
+  const record =
+    typeof data === "object" && data !== null
+      ? (data as Record<string, unknown>)
+      : {};
+  const topK =
+    typeof record.topK === "number" &&
+    Number.isFinite(record.topK) &&
+    record.topK >= 1
+      ? Math.floor(record.topK)
+      : DEFAULT_KB_TOP_K;
+  const threshold =
+    typeof record.threshold === "number" &&
+    Number.isFinite(record.threshold) &&
+    record.threshold >= 0
+      ? record.threshold
+      : DEFAULT_KB_THRESHOLD;
+  return { topK, threshold };
 }
 
 function settingsFromUiData(kind: NodeKind, data: unknown): NodeSettings {

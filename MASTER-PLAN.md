@@ -3,7 +3,7 @@
 > **Purpose of this document:** Single source of truth for what Mitos Flow is, how it should be built, and which phase is done. Update checkboxes as phases complete. Point every implementation chat at this file first.
 
 **Last updated:** 2026-08-01  
-**Current phase:** 20 (next)  
+**Current phase:** 21 (next)  
 **Stack:** Local React/Vite frontend + FastAPI backend · Cursor CLI first · Fake runner before real CLI
 
 ---
@@ -116,7 +116,7 @@ Rules:
 | Graph editor | 4–8 | [x] |
 | Shared workflow model | 9–10 | [x] |
 | Deterministic execution | 11–16 | [x] |
-| Reusable local assets | 17–20 | [ ] |
+| Reusable local assets | 17–20 | [x] |
 | Cursor CLI adapter | 21–24 | [ ] |
 | Artifact outputs & observability | 25–28 | [ ] |
 | Portability & hardening | 29–31 | [ ] |
@@ -261,7 +261,7 @@ Rules:
   - **Gate:** Retrieval returns cited chunks; attachment isolation enforced
   - **Manual check:** Attach KB to Skill; run retrieves relevant chunk
 
-- [ ] **Phase 20 — KB retrieval controls**
+- [x] **Phase 20 — KB retrieval controls**
   - Top-K and threshold per KB attachment
   - Query, chunk IDs, citations in run trace
   - **Gate:** Changing one attachment's controls affects only that Skill/KB link
@@ -434,7 +434,7 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 17 | 2026-07-29 | Managed library import: preview/confirm, original+manifest, malformed frontmatter |
 | 18 | 2026-08-01 | Rules→Skill many-to-many resolve; ordered rules in runner request + run trace |
 | 19 | 2026-08-01 | KB import (.txt/.md) + keyword retrieval with cited chunks; attachment isolation |
-| 20 | | |
+| 20 | 2026-08-01 | Per-attachment KB top-K/threshold; query + chunk IDs + citations in run trace |
 | 21 | | |
 | 22 | | |
 | 23 | | |

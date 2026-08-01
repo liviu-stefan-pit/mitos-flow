@@ -106,7 +106,9 @@ def execute_run(
     declared data-in port. Phase 18 resolves Rules resource attachments into
     the Skill runner request (ordered, de-duplicated). Phase 19 resolves
     Knowledge Base attachments and runs deterministic keyword retrieval so
-    cited chunks are available to the runner and run trace. Failure, timeout,
+    cited chunks are available to the runner and run trace. Phase 20 applies
+    per-attachment top-K / threshold and records the retrieval query in the
+    Skill run trace. Failure, timeout,
     blocked join, or cancel stops the chain so no downstream node starts.
     """
     rid = run_id or str(uuid.uuid4())
@@ -125,6 +127,7 @@ def execute_run(
         error: str | None = None,
         attached_rules: list[AttachedRule] | None = None,
         knowledge_chunks: list[CitedChunk] | None = None,
+        knowledge_query: str | None = None,
     ) -> None:
         if on_event is not None:
             on_event(
@@ -137,6 +140,7 @@ def execute_run(
                 error=error,
                 attached_rules=attached_rules,
                 knowledge_chunks=knowledge_chunks,
+                knowledge_query=knowledge_query,
             )
 
     validation = validate_workflow(workflow)
@@ -490,6 +494,8 @@ def execute_run(
         )
         knowledge_chunks = retrieve_cited_chunks(attached_kbs, query)
         record_attached_knowledge(attached_kbs, knowledge_chunks)
+        # Surface query in the Skill run trace whenever KBs are attached.
+        knowledge_query = query if attached_kbs else None
 
         emit(RunEventType.RUNNING, node_id=skill_node.id)
         try:
@@ -502,6 +508,7 @@ def execute_run(
                     error="Cancelled before Skill execution",
                     attachedRules=attached_rules,
                     knowledgeChunks=knowledge_chunks,
+                    knowledgeQuery=knowledge_query,
                 )
             )
             emit(
@@ -511,6 +518,7 @@ def execute_run(
                 error="Cancelled before Skill execution",
                 attached_rules=attached_rules,
                 knowledge_chunks=knowledge_chunks,
+                knowledge_query=knowledge_query,
             )
             _call_cleanup(active_runner, skill_node.id)
             return mark_cancelled_remaining(
@@ -543,6 +551,7 @@ def execute_run(
                     error=msg,
                     attachedRules=attached_rules,
                     knowledgeChunks=knowledge_chunks,
+                    knowledgeQuery=knowledge_query,
                 )
             )
             emit(
@@ -552,6 +561,7 @@ def execute_run(
                 error=msg,
                 attached_rules=attached_rules,
                 knowledge_chunks=knowledge_chunks,
+                knowledge_query=knowledge_query,
             )
             _call_cleanup(active_runner, skill_node.id)
             return mark_failed_remaining(
@@ -573,6 +583,7 @@ def execute_run(
                     error=str(exc),
                     attachedRules=attached_rules,
                     knowledgeChunks=knowledge_chunks,
+                    knowledgeQuery=knowledge_query,
                 )
             )
             emit(
@@ -582,6 +593,7 @@ def execute_run(
                 error=str(exc),
                 attached_rules=attached_rules,
                 knowledge_chunks=knowledge_chunks,
+                knowledge_query=knowledge_query,
             )
             _call_cleanup(active_runner, skill_node.id)
             return mark_failed_remaining(
@@ -605,10 +617,13 @@ def execute_run(
                 f"Attached {len(attached_rules)} rule(s): {labels}"
             )
         if attached_kbs:
+            chunk_ids = ", ".join(chunk.chunkId for chunk in knowledge_chunks)
             citations = ", ".join(chunk.citation for chunk in knowledge_chunks)
+            message_parts.append(f"Query: {query}")
             if knowledge_chunks:
                 message_parts.append(
-                    f"Retrieved {len(knowledge_chunks)} KB chunk(s): {citations}"
+                    f"Retrieved {len(knowledge_chunks)} KB chunk(s)"
+                    f" [{chunk_ids}]: {citations}"
                 )
             else:
                 kb_labels = ", ".join(kb.label for kb in attached_kbs)
@@ -624,6 +639,7 @@ def execute_run(
                 mediaType=media_type,
                 attachedRules=attached_rules,
                 knowledgeChunks=knowledge_chunks,
+                knowledgeQuery=knowledge_query,
             )
         )
         completed_outputs[skill_node.id] = (payload, media_type)
@@ -637,6 +653,7 @@ def execute_run(
             media_type=media_type,
             attached_rules=attached_rules,
             knowledge_chunks=knowledge_chunks,
+            knowledge_query=knowledge_query,
         )
 
     if cancel_check():
