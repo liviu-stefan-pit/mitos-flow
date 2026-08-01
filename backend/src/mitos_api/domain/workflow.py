@@ -41,6 +41,43 @@ class ArtifactOutputMode(str, Enum):
     PROMPTED = "prompted"
 
 
+class ArtifactDestinationKind(str, Enum):
+    """Where a pass-through Artifact Output delivers its payload (Phase 25)."""
+
+    PREVIEW = "preview"
+    MANAGED_FILE = "managedFile"
+
+
+class ArtifactFileWriteMode(str, Enum):
+    """Managed-file write policy under the approved output root."""
+
+    OVERWRITE = "overwrite"
+    TIMESTAMPED = "timestamped"
+
+
+class SelectorKind(str, Enum):
+    """Non-LLM Artifact Output selectors (Phase 26)."""
+
+    JSON_PATH = "jsonPath"
+    NAMED_SECTION = "namedSection"
+
+
+class MissingDataPolicy(str, Enum):
+    """
+    What happens when a selector matches nothing (Phase 26).
+
+    - skip: mark this output branch skipped (run may still complete)
+    - empty: deliver an empty artifact
+    - warning: deliver a warning-text artifact
+    - fail: fail this output branch (and the run)
+    """
+
+    SKIP = "skip"
+    EMPTY = "empty"
+    WARNING = "warning"
+    FAIL = "fail"
+
+
 class InputEnvelope(BaseModel):
     """
     One named input delivered to a Skill (Phase 14+).
@@ -94,6 +131,9 @@ class SkillNodeSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     description: str = ""
+    # Phase 28.5: SKILL.md body applied from the managed library (optional).
+    content: str = ""
+    libraryAssetId: str | None = None
     joinPolicy: JoinPolicy = JoinPolicy.WAIT_FOR_ALL
     # Phase 24: per-Skill Fake or Cursor runner (default fake).
     runner: SkillRunnerKind = "fake"
@@ -189,6 +229,73 @@ class ArtifactOutputNodeSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     mode: ArtifactOutputMode = ArtifactOutputMode.PASS_THROUGH
+    # Phase 25 — destinations (preview stays in-memory; managedFile writes to disk)
+    destination: ArtifactDestinationKind = ArtifactDestinationKind.PREVIEW
+    filePath: str | None = Field(
+        default=None,
+        description=(
+            "Relative path under MITOS_OUTPUT_ROOT when destination is managedFile"
+        ),
+    )
+    writeMode: ArtifactFileWriteMode = ArtifactFileWriteMode.TIMESTAMPED
+    # Phase 26 — deterministic selectors (meaningful when mode=selector)
+    selectorKind: SelectorKind | None = None
+    selectorExpression: str | None = Field(
+        default=None,
+        description="JSONPath expression or named text section heading",
+    )
+    missingDataPolicy: MissingDataPolicy = MissingDataPolicy.FAIL
+    # Phase 27 — prompted projection (meaningful when mode=prompted).
+    # First-class prompt template — never buried inside destination/file save.
+    promptTemplate: str | None = Field(
+        default=None,
+        description="Prompt template for prompted projection (required when mode=prompted)",
+    )
+    # Phase 27 — own runner/model for the explicit second model call
+    runner: SkillRunnerKind = "fake"
+    model: str = Field(default=DEFAULT_CURSOR_SKILL_MODEL, min_length=1)
+
+    @model_validator(mode="after")
+    def _managed_file_requires_path(self) -> ArtifactOutputNodeSettings:
+        if self.destination is ArtifactDestinationKind.MANAGED_FILE:
+            path = (self.filePath or "").strip()
+            if not path:
+                raise ValueError(
+                    "filePath is required when destination is managedFile"
+                )
+            self.filePath = path
+        return self
+
+    @model_validator(mode="after")
+    def _selector_requires_kind_and_expression(self) -> ArtifactOutputNodeSettings:
+        if self.mode is not ArtifactOutputMode.SELECTOR:
+            return self
+        if self.selectorKind is None:
+            raise ValueError(
+                "selectorKind is required when mode is selector "
+                "(jsonPath or namedSection)"
+            )
+        expression = (self.selectorExpression or "").strip()
+        if not expression:
+            raise ValueError(
+                "selectorExpression is required when mode is selector"
+            )
+        self.selectorExpression = expression
+        return self
+
+    @model_validator(mode="after")
+    def _prompted_requires_template(self) -> ArtifactOutputNodeSettings:
+        if self.mode is not ArtifactOutputMode.PROMPTED:
+            return self
+        template = (self.promptTemplate or "").strip()
+        if not template:
+            raise ValueError(
+                "promptTemplate is required when mode is prompted"
+            )
+        self.promptTemplate = template
+        model = (self.model or "").strip() or DEFAULT_CURSOR_SKILL_MODEL
+        self.model = model
+        return self
 
 
 def default_ports_for_kind(kind: NodeKind) -> list[Port]:
@@ -200,6 +307,8 @@ def default_ports_for_kind(kind: NodeKind) -> list[Port]:
             Port(id="data-in", kind=PortKind.DATA, direction=PortDirection.IN, name="default"),
             Port(id="data-out", kind=PortKind.DATA, direction=PortDirection.OUT),
             Port(id="resource-in", kind=PortKind.RESOURCE, direction=PortDirection.IN),
+            # Phase 28.5: layout alias — same attachment semantics as resource-in.
+            Port(id="resource-in-top", kind=PortKind.RESOURCE, direction=PortDirection.IN),
         ]
     if kind is NodeKind.KNOWLEDGE_BASE:
         return [

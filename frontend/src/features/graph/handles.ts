@@ -3,13 +3,19 @@ export const DATA_OUT_HANDLE = "data-out";
 export const DATA_IN_HANDLE = "data-in";
 export const RESOURCE_OUT_HANDLE = "resource-out";
 export const RESOURCE_IN_HANDLE = "resource-in";
+/** Phase 28.5: top-side Skill resource-in (layout alias of resource-in). */
+export const RESOURCE_IN_TOP_HANDLE = "resource-in-top";
 
 export type HandleKind = "data" | "resource";
 
 export function handleKindFromId(handleId: string | null | undefined): HandleKind | null {
   if (!handleId) return null;
   if (handleId === DATA_OUT_HANDLE || handleId === DATA_IN_HANDLE) return "data";
-  if (handleId === RESOURCE_OUT_HANDLE || handleId === RESOURCE_IN_HANDLE) {
+  if (
+    handleId === RESOURCE_OUT_HANDLE ||
+    handleId === RESOURCE_IN_HANDLE ||
+    handleId === RESOURCE_IN_TOP_HANDLE
+  ) {
     return "resource";
   }
   return null;

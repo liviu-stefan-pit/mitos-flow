@@ -18,6 +18,8 @@ class SkillExecutionRequest(BaseModel):
     skillNodeId: str = Field(min_length=1)
     skillLabel: str
     description: str = ""
+    # Phase 28.5: SKILL.md body applied from the managed library.
+    content: str = ""
     inputPayload: str = ""
     inputMediaType: str = "text/plain"
     inputs: list[InputEnvelope] = Field(default_factory=list)
@@ -25,6 +27,9 @@ class SkillExecutionRequest(BaseModel):
     knowledgeChunks: list[CitedChunk] = Field(default_factory=list)
     # Phase 24.5: resolved Cursor model for this Skill (None for Fake).
     model: str | None = None
+    # Phase 27: when set, this request is a prompted Artifact Output projection
+    # (explicit second model call), not a Skill step.
+    promptTemplate: str | None = None
 
 
 class SkillExecutionResult(BaseModel):

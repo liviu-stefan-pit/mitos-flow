@@ -18,6 +18,7 @@ from mitos_api.domain.run import (
     RunEventType,
     RunResponse,
     RunStatus,
+    RunSummary,
 )
 from mitos_api.domain.workflow import AttachedRule, CitedChunk, ValidationIssue
 
@@ -35,6 +36,7 @@ class RunRecord:
     output: str | None = None
     media_type: str | None = None
     events: list[RunEvent] = field(default_factory=list)
+    summary: RunSummary | None = None
     cancel_requested: bool = False
     terminal: bool = False
     _lock: threading.RLock = field(default_factory=threading.RLock)
@@ -51,6 +53,7 @@ class RunRecord:
                 output=self.output,
                 mediaType=self.media_type,
                 events=list(self.events) if include_events else [],
+                summary=self.summary,
             )
 
 
@@ -118,6 +121,11 @@ class RunStore:
         elapsed_ms: int | None = None,
         usage: RunnerUsage | None = None,
         model: str | None = None,
+        artifact_path: str | None = None,
+        artifact_absolute_path: str | None = None,
+        bytes_written: int | None = None,
+        prompt_template: str | None = None,
+        summary: RunSummary | None = None,
     ) -> RunEvent | None:
         record = self.get(run_id)
         if record is None:
@@ -163,6 +171,11 @@ class RunStore:
                 elapsedMs=elapsed_ms,
                 usage=usage,
                 model=model,
+                artifactPath=artifact_path,
+                artifactAbsolutePath=artifact_absolute_path,
+                bytesWritten=bytes_written,
+                promptTemplate=prompt_template,
+                summary=summary,
                 timestamp=_utc_now_iso(),
             )
             record.events.append(event)
@@ -186,6 +199,7 @@ class RunStore:
         errors: list[ValidationIssue] | None = None,
         output: str | None = None,
         media_type: str | None = None,
+        summary: RunSummary | None = None,
     ) -> None:
         record = self.get(run_id)
         if record is None:
@@ -196,6 +210,7 @@ class RunStore:
             record.errors = list(errors or [])
             record.output = output
             record.media_type = media_type
+            record.summary = summary
             if status in ("completed", "failed", "cancelled", "rejected"):
                 record.terminal = True
                 for queue in list(record._subscribers):
@@ -278,6 +293,11 @@ class RunStore:
             elapsed_ms: int | None = None,
             usage: RunnerUsage | None = None,
             model: str | None = None,
+            artifact_path: str | None = None,
+            artifact_absolute_path: str | None = None,
+            bytes_written: int | None = None,
+            prompt_template: str | None = None,
+            summary: RunSummary | None = None,
         ) -> None:
             self.append_event(
                 run_id,
@@ -297,6 +317,11 @@ class RunStore:
                 elapsed_ms=elapsed_ms,
                 usage=usage,
                 model=model,
+                artifact_path=artifact_path,
+                artifact_absolute_path=artifact_absolute_path,
+                bytes_written=bytes_written,
+                prompt_template=prompt_template,
+                summary=summary,
             )
 
         return _emit

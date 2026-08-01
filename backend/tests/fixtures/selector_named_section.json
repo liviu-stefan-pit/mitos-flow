@@ -1,36 +1,40 @@
 {
   "metadata": {
-    "name": "Selector output unsupported",
+    "name": "Named section selector extracts Goal",
     "schemaVersion": 1
   },
   "nodes": [
     {
       "id": "input-1",
       "kind": "input",
-      "label": "Brief",
+      "label": "Markdown in",
       "position": { "x": 0, "y": 0 },
       "settings": {
-        "mediaType": "text/plain",
-        "content": "Hello"
+        "mediaType": "text/markdown",
+        "content": "# Brief\n\n## Goal\nShip Phase 26 selectors.\n\n## Constraints\nNo LLM calls.\n"
       }
     },
     {
       "id": "skill-1",
       "kind": "skill",
-      "label": "Draft",
+      "label": "EmitMarkdown",
       "position": { "x": 220, "y": 0 },
       "settings": {
-        "description": "Draft",
+        "description": "Echo markdown for named-section tests",
         "joinPolicy": "wait_for_all"
       }
     },
     {
       "id": "output-1",
       "kind": "artifactOutput",
-      "label": "Extract",
+      "label": "Goal section",
       "position": { "x": 440, "y": 0 },
       "settings": {
-        "mode": "selector"
+        "mode": "selector",
+        "destination": "preview",
+        "selectorKind": "namedSection",
+        "selectorExpression": "Goal",
+        "missingDataPolicy": "fail"
       }
     }
   ],

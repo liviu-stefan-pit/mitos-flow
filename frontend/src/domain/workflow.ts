@@ -20,6 +20,18 @@ export type JoinPolicy = "wait_for_all";
 
 export type ArtifactOutputMode = "pass-through" | "selector" | "prompted";
 
+/** Phase 25 — where pass-through output is delivered. */
+export type ArtifactDestinationKind = "preview" | "managedFile";
+
+/** Phase 25 — managed-file write policy under MITOS_OUTPUT_ROOT. */
+export type ArtifactFileWriteMode = "overwrite" | "timestamped";
+
+/** Phase 26 — non-LLM selector kinds. */
+export type SelectorKind = "jsonPath" | "namedSection";
+
+/** Phase 26 — behavior when a selector matches nothing. */
+export type MissingDataPolicy = "skip" | "empty" | "warning" | "fail";
+
 export type Position = {
   x: number;
   y: number;
@@ -39,6 +51,9 @@ export type InputNodeSettings = {
 
 export type SkillNodeSettings = {
   description: string;
+  /** Phase 28.5: SKILL.md body from managed library (optional). */
+  content?: string;
+  libraryAssetId?: string | null;
   joinPolicy: JoinPolicy;
   /** Phase 24: per-Skill Fake or Cursor runner. */
   runner?: "fake" | "cursor";
@@ -63,6 +78,19 @@ export type RulesNodeSettings = {
 
 export type ArtifactOutputNodeSettings = {
   mode: ArtifactOutputMode;
+  destination?: ArtifactDestinationKind;
+  filePath?: string | null;
+  writeMode?: ArtifactFileWriteMode;
+  /** Phase 26 — required when mode is selector. */
+  selectorKind?: SelectorKind | null;
+  selectorExpression?: string | null;
+  missingDataPolicy?: MissingDataPolicy;
+  /** Phase 27 — required when mode is prompted. */
+  promptTemplate?: string | null;
+  /** Phase 27 — Fake or Cursor for the prompted projection call. */
+  runner?: "fake" | "cursor";
+  /** Phase 27 — Cursor model for prompted projection (default composer-2.5). */
+  model?: string | null;
 };
 
 export type NodeSettings =
@@ -135,6 +163,7 @@ export function defaultPortsForKind(kind: NodeKind): Port[] {
         { id: "data-in", kind: "data", direction: "in", name: "default" },
         { id: "data-out", kind: "data", direction: "out" },
         { id: "resource-in", kind: "resource", direction: "in" },
+        { id: "resource-in-top", kind: "resource", direction: "in" },
       ];
     case "knowledgeBase":
       return [{ id: "resource-out", kind: "resource", direction: "out" }];
@@ -152,6 +181,8 @@ export function defaultSettingsForKind(kind: NodeKind): NodeSettings {
     case "skill":
       return {
         description: "",
+        content: "",
+        libraryAssetId: null,
         joinPolicy: "wait_for_all",
         runner: "fake",
         model: DEFAULT_CURSOR_SKILL_MODEL,
@@ -161,6 +192,17 @@ export function defaultSettingsForKind(kind: NodeKind): NodeSettings {
     case "rules":
       return { description: "", content: "", libraryAssetId: null };
     case "artifactOutput":
-      return { mode: "pass-through" };
+      return {
+        mode: "pass-through",
+        destination: "preview",
+        filePath: null,
+        writeMode: "timestamped",
+        selectorKind: null,
+        selectorExpression: null,
+        missingDataPolicy: "fail",
+        promptTemplate: null,
+        runner: "fake",
+        model: DEFAULT_CURSOR_SKILL_MODEL,
+      };
   }
 }

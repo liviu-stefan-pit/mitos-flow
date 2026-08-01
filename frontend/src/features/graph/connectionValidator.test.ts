@@ -11,6 +11,7 @@ import {
   DATA_IN_HANDLE,
   DATA_OUT_HANDLE,
   RESOURCE_IN_HANDLE,
+  RESOURCE_IN_TOP_HANDLE,
   RESOURCE_OUT_HANDLE,
 } from "./handles";
 
@@ -259,5 +260,40 @@ describe("validateConnection — invalid direction examples", () => {
       RESOURCE_IN_HANDLE,
     );
     expect(result.ok).toBe(false);
+  });
+});
+
+describe("validateConnection — dual Skill resource-in handles (Phase 28.5)", () => {
+  it("accepts resource-out → resource-in-top (KB → Skill)", () => {
+    const result = check(
+      "knowledgeBase",
+      "skill",
+      RESOURCE_OUT_HANDLE,
+      RESOURCE_IN_TOP_HANDLE,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.edgeKind).toBe("resourceAttachment");
+    }
+  });
+
+  it("accepts resource-out → resource-in-top (Rules → Skill)", () => {
+    const result = check(
+      "rules",
+      "skill",
+      RESOURCE_OUT_HANDLE,
+      RESOURCE_IN_TOP_HANDLE,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("still accepts resource-out → resource-in (bottom)", () => {
+    const result = check(
+      "knowledgeBase",
+      "skill",
+      RESOURCE_OUT_HANDLE,
+      RESOURCE_IN_HANDLE,
+    );
+    expect(result.ok).toBe(true);
   });
 });

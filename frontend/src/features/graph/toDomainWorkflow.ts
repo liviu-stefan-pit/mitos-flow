@@ -20,7 +20,11 @@ import {
   WORKFLOW_SCHEMA_VERSION,
 } from "../../domain/workflow";
 import {
+  isArtifactDestinationKind,
+  isArtifactFileWriteMode,
   isArtifactOutputMode,
+  isMissingDataPolicy,
+  isSelectorKind,
   type ArtifactOutputNodeData,
   type InputNodeData,
   type KnowledgeBaseNodeData,
@@ -167,6 +171,11 @@ function settingsFromUiData(kind: NodeKind, data: unknown): NodeSettings {
       return {
         description:
           typeof skill.description === "string" ? skill.description : "",
+        content: typeof skill.content === "string" ? skill.content : "",
+        libraryAssetId:
+          typeof skill.libraryAssetId === "string"
+            ? skill.libraryAssetId
+            : null,
         joinPolicy: "wait_for_all",
         runner,
         model,
@@ -198,7 +207,46 @@ function settingsFromUiData(kind: NodeKind, data: unknown): NodeSettings {
       const mode: ArtifactOutputMode = isArtifactOutputMode(output.mode)
         ? output.mode
         : "pass-through";
-      return { mode };
+      const destination = isArtifactDestinationKind(output.destination)
+        ? output.destination
+        : "preview";
+      const writeMode = isArtifactFileWriteMode(output.writeMode)
+        ? output.writeMode
+        : "timestamped";
+      const filePath =
+        typeof output.filePath === "string" ? output.filePath : null;
+      const selectorKind = isSelectorKind(output.selectorKind)
+        ? output.selectorKind
+        : null;
+      const selectorExpression =
+        typeof output.selectorExpression === "string"
+          ? output.selectorExpression
+          : null;
+      const missingDataPolicy = isMissingDataPolicy(output.missingDataPolicy)
+        ? output.missingDataPolicy
+        : "fail";
+      const promptTemplate =
+        typeof output.promptTemplate === "string" ? output.promptTemplate : null;
+      const runner =
+        output.runner === "cursor" || output.runner === "fake"
+          ? output.runner
+          : "fake";
+      const model =
+        typeof output.model === "string" && output.model.trim()
+          ? output.model.trim()
+          : DEFAULT_CURSOR_SKILL_MODEL;
+      return {
+        mode,
+        destination,
+        filePath,
+        writeMode,
+        selectorKind,
+        selectorExpression,
+        missingDataPolicy,
+        promptTemplate,
+        runner,
+        model,
+      };
     }
   }
 }

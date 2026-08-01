@@ -107,6 +107,8 @@ describe("uiGraphToDomainWorkflow", () => {
     });
     expect(byId["skill-1"].settings).toEqual({
       description: "Draft launch notes",
+      content: "",
+      libraryAssetId: null,
       joinPolicy: "wait_for_all",
       runner: "fake",
       model: "composer-2.5",
@@ -121,7 +123,18 @@ describe("uiGraphToDomainWorkflow", () => {
       content: "Prefer short sentences.",
       libraryAssetId: null,
     });
-    expect(byId["output-1"].settings).toEqual({ mode: "selector" });
+    expect(byId["output-1"].settings).toEqual({
+      mode: "selector",
+      destination: "preview",
+      filePath: null,
+      writeMode: "timestamped",
+      selectorKind: null,
+      selectorExpression: null,
+      missingDataPolicy: "fail",
+      promptTemplate: null,
+      runner: "fake",
+      model: "composer-2.5",
+    });
 
     expect(result.workflow.edges).toHaveLength(4);
     expect(result.workflow.edges[0]).toMatchObject({

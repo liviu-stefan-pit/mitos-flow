@@ -120,11 +120,15 @@ class CursorSkillPayload(BaseModel):
     skillNodeId: str = Field(min_length=1)
     skillLabel: str
     description: str = ""
+    # Phase 28.5: SKILL.md body (optional).
+    content: str = ""
     inputPayload: str = ""
     inputMediaType: str = "text/plain"
     inputs: list[InputEnvelope] = Field(default_factory=list)
     rules: list[AttachedRule] = Field(default_factory=list)
     knowledgeChunks: list[CitedChunk] = Field(default_factory=list)
+    # Phase 27: prompted Artifact Output projection template (optional).
+    promptTemplate: str | None = None
 
 
 class CursorDryRunOptions(BaseModel):

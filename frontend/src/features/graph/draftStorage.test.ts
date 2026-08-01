@@ -130,6 +130,36 @@ describe("draft storage round-trip", () => {
     expect(restored.nodes[0].data).toMatchObject({
       label: "Result",
       mode: "selector",
+      destination: "preview",
+      writeMode: "timestamped",
+      missingDataPolicy: "fail",
+    });
+  });
+
+  it("persists managed-file destination settings", () => {
+    const storage = memoryStorage();
+    const nodes = [
+      {
+        id: "output-1",
+        type: "artifactOutput",
+        position: { x: 10, y: 20 },
+        data: {
+          label: "Save",
+          mode: "pass-through" as const,
+          destination: "managedFile" as const,
+          filePath: "out/result.txt",
+          writeMode: "overwrite" as const,
+        },
+      },
+    ];
+    saveDraft(nodes, [], storage);
+    const loaded = loadDraft(storage);
+    expect(loaded.status).toBe("ok");
+    if (loaded.status !== "ok") return;
+    expect(draftToReactFlow(loaded.draft).nodes[0].data).toMatchObject({
+      destination: "managedFile",
+      filePath: "out/result.txt",
+      writeMode: "overwrite",
     });
   });
 
@@ -167,7 +197,14 @@ describe("draft storage round-trip", () => {
       id: "skill-1",
       type: "skill",
       position: { x: 1, y: 2 },
-      data: { label: "Skill", description: "x", runner: "fake", model: "composer-2.5" },
+      data: {
+        label: "Skill",
+        description: "x",
+        content: "",
+        libraryAssetId: null,
+        runner: "fake",
+        model: "composer-2.5",
+      },
     });
   });
 });

@@ -3,7 +3,7 @@
 > Running log of completed work. Update after each phase.
 
 **Last updated:** 2026-08-01  
-**Current phase:** 25 (next)
+**Current phase:** 29 (next)
 
 ---
 
@@ -38,6 +38,11 @@
 | 23 | 2026-08-01 | Execute one Cursor Skill (spawn + capture; stub failure/timeout) |
 | 24 | 2026-08-01 | Per-Skill Fake/Cursor runners for chains and joins |
 | 24.5 | 2026-08-01 | Per-Skill Cursor model selection (default composer-2.5) |
+| 25 | 2026-08-01 | Artifact Output destinations: preview + managed-file writes |
+| 26 | 2026-08-01 | Deterministic selectors: JSONPath + named sections; missing-data policies |
+| 27 | 2026-08-01 | Prompted Artifact Output projections (explicit second model call) |
+| 28 | 2026-08-01 | Tokens, cost, and run summary (rate table + estimated cost UI) |
+| 28.5 | 2026-08-01 | Skill Apply from library + dual resource-in handles |
 
 ---
 
@@ -428,6 +433,90 @@
 
 ---
 
+### Phase 25 — Artifact Output destinations
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- Artifact Output settings: `destination` (`preview` | `managedFile`), `filePath`, `writeMode` (`overwrite` | `timestamped`)
+- Managed writes under `MITOS_OUTPUT_ROOT` (default `.mitos-flow-artifacts/`); path traversal / absolute paths rejected
+- Atomic file replacement via same-directory temp + `os.replace`
+- Preview destination: node/run output matches upstream Skill bytes; no disk write
+- Run trace + Activity timeline surface `artifactPath` / `bytesWritten` when a file is saved
+- Inspector: destination picker; file path + write mode when managed-file; canvas Preview/File badge
+- Gate tests: path traversal, overwrite replace, timestamped non-clobber, preview byte match, API write
+- Backend tests: 159 passing (11 new in `test_artifact_destinations.py`); frontend: 81 passing; `tsc -b --noEmit` clean
+- **Manual check:** Set Output → managed file + overwrite path; run; open file under output root and verify contents
+
+---
+
+### Phase 26 — Deterministic selectors
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- Artifact Output `mode=selector` with `selectorKind` (`jsonPath` | `namedSection`), `selectorExpression`, `missingDataPolicy`
+- Minimal in-tree JSONPath (`$.a.b`, `$.a[0]`, `$['key']`) + Markdown ATX named-section extraction
+- Missing-data policies: `skip` / `empty` / `warning` / `fail` — each has a fixture
+- Scheduler accepts pass-through + selector fan-out; prompted still rejected (Phase 27)
+- Selectors project upstream Skill bytes with **zero extra runner calls**
+- Inspector: selector kind/expression/missing-data fields; canvas mode badge
+- Gate fixtures: `selector_jsonpath`, `selector_named_section`, `selector_mixed_fanout`, `selector_miss_{skip,empty,warning,fail}`
+- Backend tests: 179 passing (20 new in `test_artifact_selectors.py`); frontend: 83 passing; `tsc` covered via Vitest
+- **Manual check:** Set Output → selector + JSONPath `$.output.headline` on JSON Skill output; run; preview shows extracted field
+
+---
+
+### Phase 27 — Prompted output projections
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- Artifact Output `mode=prompted` with first-class `promptTemplate` (required) + own `runner` / `model`
+- Explicit second runner call per prompted output (own timeout via `nodeTimeoutMs`, usage/model on result + SSE)
+- Prompt never buried in destination/file-save path; Activity timeline surfaces `promptTemplate`
+- Scheduler accepts pass-through + selector + prompted fan-out from one terminal Skill
+- Fake format: `fake::prompted::{label}::{promptTemplate}::{upstream}` (always differs from pass-through)
+- Inspector: prompt template textarea + Fake/Cursor runner (+ model picker); canvas Prompted + runner badges
+- Gate fixtures/tests: `prompted_simple`, `prompted_three_outputs` — Skill → 3 outputs → **2** runner calls
+- Backend tests: 185 passing (6 new in `test_artifact_prompted.py`); frontend: 85 passing; `tsc` covered via Vitest
+- **Manual check:** Set Output → prompted + prompt template; run; preview differs from pass-through of same Skill data
+
+---
+
+### Phase 28 — Tokens, cost, and run summary
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- Normalized runner usage (`normalize_usage`) fills `totalTokens` from input+output; never invents counts
+- Versioned local rate table (`RATE_TABLE_VERSION=1`): `composer-2.5`, `composer-2.5-fast`, `fake` ($0)
+- `RunSummary` on `RunResponse` + terminal SSE events: token totals + `estimatedCostUsd` (null → UI "unknown")
+- Always `costIsEstimate=true` + disclaimer: estimates are never presented as exact charges
+- FakeRunner emits deterministic synthetic usage (`source=fake`) so local runs exercise the summary UI
+- Activity timeline **Run summary** panel: input/output/total tokens + `est. $…` / `unknown` + disclaimer
+- Gate tests: calculation + unknown cases + UI never labels cost as exact (`test_run_summary.py`, ActivityTimeline)
+- Backend tests: 199 passing (14 new); frontend: 88 passing
+- **Manual check:** Run a Fake linear flow; Activity shows Run summary with token counts and estimated cost (`est. $0.00` for fake)
+
+---
+
+### Phase 28.5 — Skill Apply from library + dual resource handles
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- Skill settings: `content` + `libraryAssetId` (mirror Rules/KB)
+- Inspector **Apply from library** (`inspector-skill-library`) loads skill assets; applies name/description/body
+- Manual edit of description/content clears `libraryAssetId`
+- Cursor `assemble_prompt` includes applied body under `## Instructions`
+- Dual Skill resource-in handles: bottom `resource-in` + top `resource-in-top` (layout aliases; collectors unchanged)
+- Gate tests: `test_skill_library.py`, NodeInspector apply + connection validator top handle
+- Backend tests: 203 passing; frontend: 93 passing
+- **Manual check:** Import `extract-structured` → Apply on Skill; connect KB via top + Rules via bottom; run
+
+---
+
 ## Known issues
 
 _None._
@@ -436,4 +525,4 @@ _None._
 
 ## Next up
 
-- Phase 25: Artifact Output destinations
+- Phase 29: Reference-mode workflow export/import

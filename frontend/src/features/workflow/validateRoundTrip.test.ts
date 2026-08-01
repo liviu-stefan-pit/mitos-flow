@@ -27,7 +27,13 @@ function representativeUiGraph(): { nodes: Node[]; edges: Edge[] } {
         id: "output-1",
         type: "artifactOutput",
         position: { x: 400, y: 0 },
-        data: { label: "Out", mode: "prompted" },
+        data: {
+          label: "Out",
+          mode: "prompted",
+          promptTemplate: "Project the skill result into a short summary",
+          runner: "fake",
+          model: "composer-2.5",
+        },
       },
     ],
     edges: [
@@ -105,10 +111,23 @@ describe("schema round-trip via validate API", () => {
     });
     expect(returned["skill-1"].settings).toEqual({
       description: "Condense the brief",
+      content: "",
+      libraryAssetId: null,
       joinPolicy: "wait_for_all",
       runner: "fake",
       model: "composer-2.5",
     });
-    expect(returned["output-1"].settings).toEqual({ mode: "prompted" });
+    expect(returned["output-1"].settings).toEqual({
+      mode: "prompted",
+      destination: "preview",
+      filePath: null,
+      writeMode: "timestamped",
+      selectorKind: null,
+      selectorExpression: null,
+      missingDataPolicy: "fail",
+      promptTemplate: "Project the skill result into a short summary",
+      runner: "fake",
+      model: "composer-2.5",
+    });
   });
 });

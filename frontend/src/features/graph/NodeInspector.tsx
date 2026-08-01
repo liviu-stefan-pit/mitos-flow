@@ -17,13 +17,25 @@ import {
   fetchCursorModels,
 } from "../settings/cursorApi";
 import {
+  ARTIFACT_DESTINATIONS,
+  ARTIFACT_FILE_WRITE_MODES,
   ARTIFACT_OUTPUT_MODES,
+  MISSING_DATA_POLICIES,
+  SELECTOR_KINDS,
+  isArtifactDestinationKind,
+  isArtifactFileWriteMode,
   isArtifactOutputMode,
+  isMissingDataPolicy,
+  isSelectorKind,
+  type ArtifactDestinationKind,
+  type ArtifactFileWriteMode,
   type ArtifactOutputMode,
   type ArtifactOutputNodeData,
   type InputNodeData,
   type KnowledgeBaseNodeData,
+  type MissingDataPolicy,
   type RulesNodeData,
+  type SelectorKind,
   type SkillNodeData,
 } from "./nodeData";
 import { nodeKindFromFlowType, type NodeKind } from "./nodeKinds";
@@ -189,7 +201,7 @@ function SkillFields({
   data: SkillNodeData;
   nodes: Node[];
   edges: Edge[];
-  onPatch: (patch: Partial<SkillNodeData>) => void;
+  onPatch: (patch: Partial<SkillNodeData> & { label?: string }) => void;
   onUpdateEdgeData: (edgeId: string, patch: Record<string, unknown>) => void;
 }) {
   const runnerKind = data.runner === "cursor" ? "cursor" : "fake";
@@ -198,6 +210,10 @@ function SkillFields({
   ]);
   const [modelsMessage, setModelsMessage] = useState<string | null>(null);
   const [modelsStatus, setModelsStatus] = useState<string>("available");
+  const [skillAssets, setSkillAssets] = useState<LibraryAssetSummary[]>([]);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
+  const selectedAssetId = data.libraryAssetId ?? "";
 
   useEffect(() => {
     if (runnerKind !== "cursor") return;
@@ -243,6 +259,54 @@ function SkillFields({
       cancelled = true;
     };
   }, [runnerKind, skillNodeId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result = await listLibraryAssets();
+        if (cancelled) return;
+        setSkillAssets(result.assets.filter((asset) => asset.kind === "skill"));
+        setLibraryError(null);
+      } catch (err) {
+        if (cancelled) return;
+        setLibraryError(
+          err instanceof LibraryApiError
+            ? err.message
+            : "Could not load library skills.",
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [skillNodeId]);
+
+  const applyFromLibrary = async (assetId: string) => {
+    if (!assetId) {
+      onPatch({ libraryAssetId: null });
+      return;
+    }
+    setApplying(true);
+    try {
+      const asset = await getLibraryAsset(assetId);
+      onPatch({
+        label: asset.manifest.name,
+        description: asset.manifest.description,
+        content: asset.manifest.body,
+        libraryAssetId: asset.manifest.id,
+      });
+      setLibraryError(null);
+    } catch (err) {
+      setLibraryError(
+        err instanceof LibraryApiError
+          ? err.message
+          : "Could not load the selected skill asset.",
+      );
+    } finally {
+      setApplying(false);
+    }
+  };
 
   const selectedModel =
     typeof data.model === "string" && data.model.trim().length > 0
@@ -308,9 +372,54 @@ function SkillFields({
           data-testid="inspector-description"
           rows={3}
           value={data.description ?? ""}
-          onChange={(event) => onPatch({ description: event.target.value })}
+          onChange={(event) =>
+            onPatch({ description: event.target.value, libraryAssetId: null })
+          }
         />
       </label>
+      <label className="node-inspector-field">
+        <span>Skill content</span>
+        <textarea
+          data-testid="inspector-skill-content"
+          rows={5}
+          value={data.content ?? ""}
+          onChange={(event) =>
+            onPatch({ content: event.target.value, libraryAssetId: null })
+          }
+        />
+      </label>
+      <label className="node-inspector-field">
+        <span>Apply from library</span>
+        <select
+          data-testid="inspector-skill-library"
+          value={selectedAssetId}
+          disabled={applying}
+          onChange={(event) => {
+            void applyFromLibrary(event.target.value);
+          }}
+        >
+          <option value="">— Manual / none —</option>
+          {skillAssets.map((asset) => (
+            <option key={asset.id} value={asset.id}>
+              {asset.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {libraryError ? (
+        <p
+          className="node-inspector-hint"
+          role="alert"
+          data-testid="inspector-skill-library-error"
+        >
+          {libraryError}
+        </p>
+      ) : (
+        <p className="node-inspector-hint">
+          Import a Skill into the Asset library, then apply it here. Body text
+          is sent to Cursor under Instructions.
+        </p>
+      )}
       <div className="node-inspector-field">
         <span>Runner</span>
         <div
@@ -725,23 +834,328 @@ function ArtifactOutputFields({
   const mode: ArtifactOutputMode = isArtifactOutputMode(data.mode)
     ? data.mode
     : "pass-through";
+  const destination: ArtifactDestinationKind = isArtifactDestinationKind(
+    data.destination,
+  )
+    ? data.destination
+    : "preview";
+  const writeMode: ArtifactFileWriteMode = isArtifactFileWriteMode(
+    data.writeMode,
+  )
+    ? data.writeMode
+    : "timestamped";
+  const selectorKind: SelectorKind = isSelectorKind(data.selectorKind)
+    ? data.selectorKind
+    : "jsonPath";
+  const missingDataPolicy: MissingDataPolicy = isMissingDataPolicy(
+    data.missingDataPolicy,
+  )
+    ? data.missingDataPolicy
+    : "fail";
+  const runnerKind = data.runner === "cursor" ? "cursor" : "fake";
+  const selectedModel =
+    typeof data.model === "string" && data.model.trim()
+      ? data.model.trim()
+      : DEFAULT_CURSOR_SKILL_MODEL;
+  const [models, setModels] = useState<{ id: string; label: string }[]>([]);
+  const [modelsStatus, setModelsStatus] = useState<string>("idle");
+  const [modelsMessage, setModelsMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (mode !== "prompted" || runnerKind !== "cursor") return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const report = await fetchCursorModels();
+        if (cancelled) return;
+        setModelsStatus(report.status);
+        setModelsMessage(
+          report.status === "available" ? null : report.message || null,
+        );
+        setModels(
+          report.models.map((m) => ({ id: m.id, label: m.label || m.id })),
+        );
+      } catch {
+        if (cancelled) return;
+        setModelsStatus("error");
+        setModelsMessage("Could not load Cursor models.");
+        setModels([{ id: DEFAULT_CURSOR_SKILL_MODEL, label: DEFAULT_CURSOR_SKILL_MODEL }]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, runnerKind]);
 
   return (
-    <label className="node-inspector-field">
-      <span>Output mode</span>
-      <select
-        data-testid="inspector-output-mode"
-        value={mode}
-        onChange={(event) =>
-          onPatch({ mode: event.target.value as ArtifactOutputMode })
-        }
-      >
-        {ARTIFACT_OUTPUT_MODES.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </label>
+    <>
+      <label className="node-inspector-field">
+        <span>Output mode</span>
+        <select
+          data-testid="inspector-output-mode"
+          value={mode}
+          onChange={(event) => {
+            const next = event.target.value as ArtifactOutputMode;
+            if (next === "selector") {
+              onPatch({
+                mode: next,
+                selectorKind: isSelectorKind(data.selectorKind)
+                  ? data.selectorKind
+                  : "jsonPath",
+                selectorExpression: data.selectorExpression ?? "",
+                missingDataPolicy: isMissingDataPolicy(data.missingDataPolicy)
+                  ? data.missingDataPolicy
+                  : "fail",
+              });
+            } else if (next === "prompted") {
+              onPatch({
+                mode: next,
+                promptTemplate: data.promptTemplate ?? "",
+                runner: data.runner === "cursor" ? "cursor" : "fake",
+                model:
+                  typeof data.model === "string" && data.model.trim()
+                    ? data.model.trim()
+                    : DEFAULT_CURSOR_SKILL_MODEL,
+              });
+            } else {
+              onPatch({ mode: next });
+            }
+          }}
+        >
+          {ARTIFACT_OUTPUT_MODES.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+      {mode === "selector" ? (
+        <>
+          <label className="node-inspector-field">
+            <span>Selector kind</span>
+            <select
+              data-testid="inspector-selector-kind"
+              value={selectorKind}
+              onChange={(event) =>
+                onPatch({
+                  selectorKind: event.target.value as SelectorKind,
+                })
+              }
+            >
+              {SELECTOR_KINDS.map((option) => (
+                <option key={option} value={option}>
+                  {option === "jsonPath" ? "JSONPath" : "named section"}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="node-inspector-field">
+            <span>
+              {selectorKind === "namedSection"
+                ? "Section heading"
+                : "JSONPath expression"}
+            </span>
+            <input
+              type="text"
+              data-testid="inspector-selector-expression"
+              placeholder={
+                selectorKind === "namedSection"
+                  ? "Goal"
+                  : "$.output.headline"
+              }
+              value={data.selectorExpression ?? ""}
+              onChange={(event) =>
+                onPatch({ selectorExpression: event.target.value })
+              }
+            />
+          </label>
+          <label className="node-inspector-field">
+            <span>Missing data</span>
+            <select
+              data-testid="inspector-missing-data-policy"
+              value={missingDataPolicy}
+              onChange={(event) =>
+                onPatch({
+                  missingDataPolicy: event.target
+                    .value as MissingDataPolicy,
+                })
+              }
+            >
+              {MISSING_DATA_POLICIES.map((option) => (
+                <option key={option} value={option}>
+                  {option === "empty"
+                    ? "empty artifact"
+                    : option === "warning"
+                      ? "warning artifact"
+                      : option === "fail"
+                        ? "fail branch"
+                        : option}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="node-inspector-hint">
+            Selectors extract from the upstream Skill result without an extra
+            model call.
+          </p>
+        </>
+      ) : null}
+      {mode === "prompted" ? (
+        <>
+          <label className="node-inspector-field">
+            <span>Prompt template</span>
+            <textarea
+              data-testid="inspector-prompt-template"
+              rows={4}
+              placeholder="Describe how to project the upstream Skill result…"
+              value={data.promptTemplate ?? ""}
+              onChange={(event) =>
+                onPatch({ promptTemplate: event.target.value })
+              }
+            />
+          </label>
+          <div className="node-inspector-field">
+            <span>Projection runner</span>
+            <div
+              className="node-inspector-runner"
+              role="radiogroup"
+              aria-label="Prompted output runner"
+              data-testid="inspector-output-runner-kind"
+            >
+              <label className="node-inspector-runner-option">
+                <input
+                  type="radio"
+                  name="output-runner"
+                  value="fake"
+                  checked={runnerKind === "fake"}
+                  onChange={() => onPatch({ runner: "fake" })}
+                  data-testid="inspector-output-runner-fake"
+                />
+                Fake
+              </label>
+              <label className="node-inspector-runner-option">
+                <input
+                  type="radio"
+                  name="output-runner"
+                  value="cursor"
+                  checked={runnerKind === "cursor"}
+                  onChange={() =>
+                    onPatch({
+                      runner: "cursor",
+                      model:
+                        typeof data.model === "string" && data.model.trim()
+                          ? data.model.trim()
+                          : DEFAULT_CURSOR_SKILL_MODEL,
+                    })
+                  }
+                  data-testid="inspector-output-runner-cursor"
+                />
+                Cursor
+              </label>
+            </div>
+          </div>
+          {runnerKind === "cursor" ? (
+            <label className="node-inspector-field">
+              <span>Cursor model</span>
+              <select
+                data-testid="inspector-output-cursor-model"
+                value={selectedModel}
+                onChange={(event) => onPatch({ model: event.target.value })}
+              >
+                {!models.some((m) => m.id === selectedModel) ? (
+                  <option value={selectedModel}>{selectedModel}</option>
+                ) : null}
+                {models.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.label === model.id
+                      ? model.id
+                      : `${model.label} (${model.id})`}
+                  </option>
+                ))}
+              </select>
+              {modelsMessage ? (
+                <p
+                  className="node-inspector-hint"
+                  role="status"
+                  data-testid="inspector-output-cursor-model-warning"
+                  data-models-status={modelsStatus}
+                >
+                  {modelsMessage}
+                </p>
+              ) : (
+                <p className="node-inspector-hint">
+                  Prompted projection is an explicit second model call with its
+                  own runner, model, timeout, and usage.
+                </p>
+              )}
+            </label>
+          ) : (
+            <p className="node-inspector-hint">
+              Prompted projection is an explicit second model call — never
+              buried inside file save.
+            </p>
+          )}
+        </>
+      ) : null}
+      <label className="node-inspector-field">
+        <span>Destination</span>
+        <select
+          data-testid="inspector-output-destination"
+          value={destination}
+          onChange={(event) =>
+            onPatch({
+              destination: event.target.value as ArtifactDestinationKind,
+            })
+          }
+        >
+          {ARTIFACT_DESTINATIONS.map((option) => (
+            <option key={option} value={option}>
+              {option === "managedFile" ? "managed file" : option}
+            </option>
+          ))}
+        </select>
+      </label>
+      {destination === "managedFile" ? (
+        <>
+          <label className="node-inspector-field">
+            <span>Relative file path</span>
+            <input
+              type="text"
+              data-testid="inspector-output-filepath"
+              placeholder="reports/result.txt"
+              value={data.filePath ?? ""}
+              onChange={(event) => onPatch({ filePath: event.target.value })}
+            />
+          </label>
+          <p className="node-inspector-hint">
+            Path is relative to the managed output root (MITOS_OUTPUT_ROOT).
+            Absolute paths and <code>..</code> are rejected.
+          </p>
+          <label className="node-inspector-field">
+            <span>Write mode</span>
+            <select
+              data-testid="inspector-output-writemode"
+              value={writeMode}
+              onChange={(event) =>
+                onPatch({
+                  writeMode: event.target.value as ArtifactFileWriteMode,
+                })
+              }
+            >
+              {ARTIFACT_FILE_WRITE_MODES.map((option) => (
+                <option key={option} value={option}>
+                  {option === "timestamped" ? "timestamped copy" : option}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      ) : (
+        <p className="node-inspector-hint">
+          Preview keeps upstream bytes in the run result without writing a
+          file.
+        </p>
+      )}
+    </>
   );
 }

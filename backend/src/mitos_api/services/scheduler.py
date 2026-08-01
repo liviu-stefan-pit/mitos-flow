@@ -31,10 +31,12 @@ from mitos_api.domain.workflow import (
 @dataclass(frozen=True)
 class LinearChainPlan:
     """
-    Execution plan for Inputs → Skills → pass-through Artifact Outputs.
+    Execution plan for Inputs → Skills → Artifact Outputs.
 
     Phase 14 allows multiple Input nodes and wait_for_all joins into a Skill
     via distinct named data-in ports. Passive output fan-out remains supported.
+    Phase 26 allows pass-through and deterministic selector outputs.
+    Phase 27 allows prompted projections (explicit second runner call).
     """
 
     input_nodes: list[WorkflowNode]
@@ -70,10 +72,11 @@ def plan_linear_chain(
     - One or more Input nodes
     - One or more Skills (linear Skill→Skill path; joins into a Skill via
       distinct named data-in ports with wait_for_all)
-    - One or more pass-through Artifact Outputs fed by a single terminal Skill
+    - One or more Artifact Outputs (pass-through, selector, or prompted) fed
+      by a single terminal Skill
 
     Rejects: Input branching, Skill→Skill branching, same-port multi-edge,
-    non-pass_through outputs, join policies other than wait_for_all.
+    join policies other than wait_for_all.
     Resource nodes are ignored for scheduling.
     """
     by_kind: dict[NodeKind, list[WorkflowNode]] = {
@@ -156,17 +159,49 @@ def plan_linear_chain(
                     nodeId=output_node.id,
                 )
             ]
-        if output_node.settings.mode is not ArtifactOutputMode.PASS_THROUGH:
+        mode = output_node.settings.mode
+        # Phase 27: pass-through, selector, and prompted projections.
+        if mode not in (
+            ArtifactOutputMode.PASS_THROUGH,
+            ArtifactOutputMode.SELECTOR,
+            ArtifactOutputMode.PROMPTED,
+        ):
             return None, [
                 ValidationIssue(
                     code="unsupported_graph",
                     message=(
-                        "Phase 14 only supports pass-through Artifact Output "
-                        f"(got '{output_node.settings.mode.value}')."
+                        "Unsupported Artifact Output mode "
+                        f"'{mode.value}'."
                     ),
                     nodeId=output_node.id,
                 )
             ]
+        if mode is ArtifactOutputMode.SELECTOR:
+            if output_node.settings.selectorKind is None or not (
+                output_node.settings.selectorExpression or ""
+            ).strip():
+                return None, [
+                    ValidationIssue(
+                        code="unsupported_graph",
+                        message=(
+                            "Selector Artifact Outputs require selectorKind "
+                            "and selectorExpression."
+                        ),
+                        nodeId=output_node.id,
+                    )
+                ]
+        if mode is ArtifactOutputMode.PROMPTED:
+            if not (output_node.settings.promptTemplate or "").strip():
+                return None, [
+                    ValidationIssue(
+                        code="unsupported_graph",
+                        message=(
+                            "Prompted Artifact Outputs require a non-empty "
+                            "promptTemplate."
+                        ),
+                        nodeId=output_node.id,
+                    )
+                ]
 
     chain_ids = {
         *(n.id for n in input_nodes),

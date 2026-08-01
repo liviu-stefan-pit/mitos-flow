@@ -1,55 +1,50 @@
 {
   "metadata": {
-    "name": "Mixed fan-out with empty prompted template (invalid)",
+    "name": "Pass-through + selector fan-out (zero extra runner calls)",
     "schemaVersion": 1
   },
   "nodes": [
     {
       "id": "input-1",
       "kind": "input",
-      "label": "Brief",
+      "label": "JSON in",
       "position": { "x": 0, "y": 0 },
       "settings": {
-        "mediaType": "text/plain",
-        "content": "Hello from input"
+        "mediaType": "application/json",
+        "content": "{\"output\":{\"headline\":\"Extract me with JSONPath\",\"body\":\"full body\"}}"
       }
     },
     {
       "id": "skill-1",
       "kind": "skill",
-      "label": "Draft",
+      "label": "EmitJSON",
       "position": { "x": 220, "y": 0 },
       "settings": {
-        "description": "Draft the reply",
+        "description": "Echo JSON",
         "joinPolicy": "wait_for_all"
       }
     },
     {
       "id": "output-1",
       "kind": "artifactOutput",
-      "label": "Out A",
-      "position": { "x": 440, "y": -80 },
+      "label": "Full",
+      "position": { "x": 440, "y": -60 },
       "settings": {
-        "mode": "pass-through"
+        "mode": "pass-through",
+        "destination": "preview"
       }
     },
     {
       "id": "output-2",
       "kind": "artifactOutput",
-      "label": "Out B prompted",
-      "position": { "x": 440, "y": 0 },
+      "label": "Headline only",
+      "position": { "x": 440, "y": 60 },
       "settings": {
-        "mode": "prompted",
-        "promptTemplate": ""
-      }
-    },
-    {
-      "id": "output-3",
-      "kind": "artifactOutput",
-      "label": "Out C",
-      "position": { "x": 440, "y": 80 },
-      "settings": {
-        "mode": "pass-through"
+        "mode": "selector",
+        "destination": "preview",
+        "selectorKind": "jsonPath",
+        "selectorExpression": "$.output.headline",
+        "missingDataPolicy": "fail"
       }
     }
   ],
@@ -75,14 +70,6 @@
       "kind": "dataFlow",
       "sourceNodeId": "skill-1",
       "targetNodeId": "output-2",
-      "sourcePortId": "data-out",
-      "targetPortId": "data-in"
-    },
-    {
-      "id": "e4",
-      "kind": "dataFlow",
-      "sourceNodeId": "skill-1",
-      "targetNodeId": "output-3",
       "sourcePortId": "data-out",
       "targetPortId": "data-in"
     }

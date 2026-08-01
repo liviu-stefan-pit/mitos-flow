@@ -45,6 +45,36 @@ export type RunnerUsage = {
   source?: string | null;
 };
 
+/** One model-call contribution inside a run summary (Phase 28). */
+export type UsageCallSummary = {
+  nodeId: string;
+  model?: string | null;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  totalTokens?: number | null;
+  estimatedCostUsd?: number | null;
+  source?: string | null;
+};
+
+/**
+ * Aggregated tokens + estimated cost for a run (Phase 28).
+ * Null token / cost fields mean unavailable — UI must show "unknown".
+ * When estimatedCostUsd is set it is always an estimate (never an exact charge).
+ */
+export type RunSummary = {
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  totalTokens?: number | null;
+  estimatedCostUsd?: number | null;
+  costIsEstimate?: boolean;
+  rateTableVersion?: number | null;
+  disclaimer?: string;
+  usageAvailable?: boolean;
+  pricingAvailable?: boolean;
+  callCount?: number;
+  calls?: UsageCallSummary[];
+};
+
 export type CursorRunOptions = {
   executable?: string | null;
   workspace?: string | null;
@@ -85,6 +115,11 @@ export type NodeRunResult = {
   elapsedMs?: number | null;
   usage?: RunnerUsage | null;
   model?: string | null;
+  artifactPath?: string | null;
+  artifactAbsolutePath?: string | null;
+  bytesWritten?: number | null;
+  /** Phase 27 — prompt template used for prompted projection. */
+  promptTemplate?: string | null;
 };
 
 export type AttachedRule = {
@@ -124,6 +159,13 @@ export type RunEvent = {
   elapsedMs?: number | null;
   usage?: RunnerUsage | null;
   model?: string | null;
+  artifactPath?: string | null;
+  artifactAbsolutePath?: string | null;
+  bytesWritten?: number | null;
+  /** Phase 27 — prompt template for prompted projection events. */
+  promptTemplate?: string | null;
+  /** Phase 28 — tokens / estimated cost (terminal run-scoped events). */
+  summary?: RunSummary | null;
   timestamp: string;
 };
 
@@ -135,6 +177,8 @@ export type RunResponse = {
   output?: string | null;
   mediaType?: string | null;
   events?: RunEvent[];
+  /** Phase 28 — aggregated tokens + estimated cost. */
+  summary?: RunSummary | null;
 };
 
 export type CancelRunResponse = {

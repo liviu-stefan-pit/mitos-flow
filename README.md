@@ -48,6 +48,7 @@ Press `Ctrl+C` to stop both services.
 | `VITE_API_URL` | (empty in Vite dev → same-origin `/api` proxy) | Backend URL for frontend |
 | `CORS_ORIGINS` | (localhost regex) | Extra allowed CORS origins (comma-separated) |
 | `MITOS_LIBRARY_ROOT` | `.mitos-flow-library` under cwd | Managed Skill/Rules/KB library root (E2E uses a temp dir) |
+| `MITOS_OUTPUT_ROOT` | `.mitos-flow-artifacts` under cwd | Approved Artifact Output write root (Phase 25) |
 
 Create a `frontend/.env.local` to override the API URL:
 

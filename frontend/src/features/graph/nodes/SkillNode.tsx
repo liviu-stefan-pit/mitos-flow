@@ -3,6 +3,7 @@ import {
   DATA_IN_HANDLE,
   DATA_OUT_HANDLE,
   RESOURCE_IN_HANDLE,
+  RESOURCE_IN_TOP_HANDLE,
 } from "../handles";
 import type { SkillNodeData } from "../nodeData";
 
@@ -29,10 +30,19 @@ export function SkillNode({ data }: NodeProps) {
       />
       <Handle
         type="target"
+        position={Position.Top}
+        id={RESOURCE_IN_TOP_HANDLE}
+        className="handle-resource"
+        title="Resource in"
+        data-testid="skill-resource-in-top"
+      />
+      <Handle
+        type="target"
         position={Position.Bottom}
         id={RESOURCE_IN_HANDLE}
         className="handle-resource"
         title="Resource in"
+        data-testid="skill-resource-in-bottom"
       />
       <div className="graph-node-kind">Skill</div>
       <div className="graph-node-label">{label}</div>

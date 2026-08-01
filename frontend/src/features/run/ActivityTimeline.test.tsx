@@ -97,3 +97,102 @@ describe("ActivityTimeline — cited KB chunks (Phase 19–20)", () => {
     expect(screen.getByText("kb-product:c0")).toBeInTheDocument();
   });
 });
+
+describe("ActivityTimeline — run summary (Phase 28)", () => {
+  it("shows token counts and estimated cost with disclaimer", () => {
+    render(
+      <ActivityTimeline
+        events={[]}
+        selectedNodeId={null}
+        runStatus="completed"
+        summary={{
+          inputTokens: 100,
+          outputTokens: 50,
+          totalTokens: 150,
+          estimatedCostUsd: 0.00125,
+          costIsEstimate: true,
+          rateTableVersion: 1,
+          disclaimer:
+            "Estimated cost from a local rate table — not an exact charge.",
+          usageAvailable: true,
+          pricingAvailable: true,
+          callCount: 1,
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId("activity-run-summary")).toBeInTheDocument();
+    expect(screen.getByTestId("summary-input-tokens")).toHaveTextContent("100");
+    expect(screen.getByTestId("summary-output-tokens")).toHaveTextContent("50");
+    expect(screen.getByTestId("summary-total-tokens")).toHaveTextContent("150");
+    const cost = screen.getByTestId("summary-estimated-cost");
+    expect(cost).toHaveTextContent(/est\./i);
+    expect(cost).not.toHaveTextContent(/exact/i);
+    expect(screen.getByTestId("summary-disclaimer")).toHaveTextContent(
+      /not an exact charge/i,
+    );
+  });
+
+  it("shows unknown when usage and pricing are unavailable", () => {
+    render(
+      <ActivityTimeline
+        events={[]}
+        selectedNodeId={null}
+        runStatus="completed"
+        summary={{
+          inputTokens: null,
+          outputTokens: null,
+          totalTokens: null,
+          estimatedCostUsd: null,
+          costIsEstimate: true,
+          disclaimer:
+            "Estimated cost from a local rate table — not an exact charge.",
+          usageAvailable: false,
+          pricingAvailable: false,
+          callCount: 0,
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId("summary-input-tokens")).toHaveTextContent(
+      "unknown",
+    );
+    expect(screen.getByTestId("summary-output-tokens")).toHaveTextContent(
+      "unknown",
+    );
+    expect(screen.getByTestId("summary-total-tokens")).toHaveTextContent(
+      "unknown",
+    );
+    expect(screen.getByTestId("summary-estimated-cost")).toHaveTextContent(
+      "unknown",
+    );
+  });
+
+  it("never presents estimates as exact charges", () => {
+    render(
+      <ActivityTimeline
+        events={[]}
+        selectedNodeId={null}
+        runStatus="completed"
+        summary={{
+          inputTokens: 10,
+          outputTokens: 5,
+          totalTokens: 15,
+          estimatedCostUsd: 0,
+          costIsEstimate: true,
+          disclaimer:
+            "Estimated cost from a local rate table — not an exact charge.",
+          usageAvailable: true,
+          pricingAvailable: true,
+        }}
+      />,
+    );
+
+    const cost = screen.getByTestId("summary-estimated-cost");
+    expect(cost.textContent?.toLowerCase()).toMatch(/est\./);
+    expect(cost.textContent?.toLowerCase()).not.toMatch(/exact charge/);
+    expect(screen.getByTestId("summary-disclaimer").textContent).toMatch(
+      /not an exact charge/i,
+    );
+  });
+});

@@ -1,7 +1,11 @@
 import type { Edge, Node } from "@xyflow/react";
 import {
   defaultNodeData,
+  isArtifactDestinationKind,
+  isArtifactFileWriteMode,
   isArtifactOutputMode,
+  isMissingDataPolicy,
+  isSelectorKind,
   DEFAULT_CURSOR_SKILL_MODEL,
   type MitosNodeData,
 } from "./nodeData";
@@ -89,6 +93,11 @@ function normalizeNodeData(
         label,
         description:
           typeof record.description === "string" ? record.description : "",
+        content: typeof record.content === "string" ? record.content : "",
+        libraryAssetId:
+          typeof record.libraryAssetId === "string"
+            ? record.libraryAssetId
+            : null,
         runner:
           record.runner === "cursor" || record.runner === "fake"
             ? record.runner
@@ -124,6 +133,36 @@ function normalizeNodeData(
       return {
         label,
         mode: isArtifactOutputMode(record.mode) ? record.mode : "pass-through",
+        destination: isArtifactDestinationKind(record.destination)
+          ? record.destination
+          : "preview",
+        filePath:
+          typeof record.filePath === "string" ? record.filePath : null,
+        writeMode: isArtifactFileWriteMode(record.writeMode)
+          ? record.writeMode
+          : "timestamped",
+        selectorKind: isSelectorKind(record.selectorKind)
+          ? record.selectorKind
+          : null,
+        selectorExpression:
+          typeof record.selectorExpression === "string"
+            ? record.selectorExpression
+            : null,
+        missingDataPolicy: isMissingDataPolicy(record.missingDataPolicy)
+          ? record.missingDataPolicy
+          : "fail",
+        promptTemplate:
+          typeof record.promptTemplate === "string"
+            ? record.promptTemplate
+            : null,
+        runner:
+          record.runner === "cursor" || record.runner === "fake"
+            ? record.runner
+            : "fake",
+        model:
+          typeof record.model === "string" && record.model.trim()
+            ? record.model.trim()
+            : DEFAULT_CURSOR_SKILL_MODEL,
       };
   }
 }

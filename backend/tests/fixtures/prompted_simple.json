@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "name": "Mixed fan-out with empty prompted template (invalid)",
+    "name": "Simple prompted Artifact Output",
     "schemaVersion": 1
   },
   "nodes": [
@@ -20,36 +20,22 @@
       "label": "Draft",
       "position": { "x": 220, "y": 0 },
       "settings": {
-        "description": "Draft the reply",
-        "joinPolicy": "wait_for_all"
+        "description": "Draft",
+        "joinPolicy": "wait_for_all",
+        "runner": "fake"
       }
     },
     {
       "id": "output-1",
       "kind": "artifactOutput",
-      "label": "Out A",
-      "position": { "x": 440, "y": -80 },
-      "settings": {
-        "mode": "pass-through"
-      }
-    },
-    {
-      "id": "output-2",
-      "kind": "artifactOutput",
-      "label": "Out B prompted",
+      "label": "Rewrite",
       "position": { "x": 440, "y": 0 },
       "settings": {
         "mode": "prompted",
-        "promptTemplate": ""
-      }
-    },
-    {
-      "id": "output-3",
-      "kind": "artifactOutput",
-      "label": "Out C",
-      "position": { "x": 440, "y": 80 },
-      "settings": {
-        "mode": "pass-through"
+        "destination": "preview",
+        "promptTemplate": "Rewrite as a one-line headline",
+        "runner": "fake",
+        "model": "composer-2.5"
       }
     }
   ],
@@ -67,22 +53,6 @@
       "kind": "dataFlow",
       "sourceNodeId": "skill-1",
       "targetNodeId": "output-1",
-      "sourcePortId": "data-out",
-      "targetPortId": "data-in"
-    },
-    {
-      "id": "e3",
-      "kind": "dataFlow",
-      "sourceNodeId": "skill-1",
-      "targetNodeId": "output-2",
-      "sourcePortId": "data-out",
-      "targetPortId": "data-in"
-    },
-    {
-      "id": "e4",
-      "kind": "dataFlow",
-      "sourceNodeId": "skill-1",
-      "targetNodeId": "output-3",
       "sourcePortId": "data-out",
       "targetPortId": "data-in"
     }

@@ -3,7 +3,7 @@
 > **Purpose of this document:** Single source of truth for what Mitos Flow is, how it should be built, and which phase is done. Update checkboxes as phases complete. Point every implementation chat at this file first.
 
 **Last updated:** 2026-08-01  
-**Current phase:** 25 (next)  
+**Current phase:** 29 (next)  
 **Stack:** Local React/Vite frontend + FastAPI backend · Cursor CLI first · Fake runner before real CLI
 
 ---
@@ -120,7 +120,8 @@ Rules:
 | Regression harness | 20.5 | [x] |
 | Cursor CLI adapter | 21–24 | [x] |
 | Per-Skill Cursor models | 24.5 | [x] |
-| Artifact outputs & observability | 25–28 | [ ] |
+| Artifact outputs & observability | 25–28 | [x] |
+| Skill library apply + dual handles | 28.5 | [x] |
 | Portability & hardening | 29–31 | [ ] |
 
 ---
@@ -313,29 +314,36 @@ Rules:
 
 ### Artifact outputs and observability
 
-- [ ] **Phase 25 — Artifact Output destinations**
+- [x] **Phase 25 — Artifact Output destinations**
   - Passive preview + managed-file destinations (overwrite / timestamped copy)
   - Writes constrained to approved output root; atomic file replacement
   - **Gate:** Path traversal and overwrite tests pass; preview matches upstream bytes
   - **Manual check:** Save output to file; open and verify contents
 
-- [ ] **Phase 26 — Deterministic selectors**
+- [x] **Phase 26 — Deterministic selectors**
   - Non-LLM selectors: JSONPath, named text sections
   - Missing-data policies: skip, empty artifact, warning artifact, fail branch
   - **Gate:** Every policy has fixture; selectors cause zero runner calls
   - **Manual check:** Selector extracts field from JSON output
 
-- [ ] **Phase 27 — Prompted output projections**
+- [x] **Phase 27 — Prompted output projections**
   - Prompted Output = explicit second execution with own runner/model/timeout/usage
   - Attached prompt template; never hidden inside file save
   - **Gate:** One Skill → 3 outputs (pass-through, selector, prompted); trace shows 2 model calls
   - **Manual check:** Prompted output generates different artifact from same Skill data
 
-- [ ] **Phase 28 — Tokens, cost, and run summary**
+- [x] **Phase 28 — Tokens, cost, and run summary**
   - Normalize runner usage; estimated cost from versioned local rate table
   - Show "unknown" when usage/pricing unavailable
   - **Gate:** Calculation tests pass; UI never presents estimates as exact charges
   - **Manual check:** Run summary shows token counts and estimated cost
+
+- [x] **Phase 28.5 — Skill Apply from library + dual resource handles**
+  - Skill inspector Apply from library (mirror Rules/KB): `content` + `libraryAssetId`
+  - Skill body included in Cursor prompt assembly
+  - Dual resource-in handles (top + bottom) for cleaner KB/Rules layout
+  - **Gate:** Apply updates label/description/content; top handle accepts resource edges; prompt includes body
+  - **Manual check:** Import extract-structured → Apply on Skill; wire KB top + Rules bottom; run
 
 ---
 
@@ -457,10 +465,11 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 23 | 2026-08-01 | CursorRunner spawn for Input→Skill→Output; capture + stub failure/timeout |
 | 24 | 2026-08-01 | Per-Skill Fake/Cursor runners; chain + join with stubs |
 | 24.5 | 2026-08-01 | Per-Skill Cursor model selection; default composer-2.5 |
-| 25 | | |
-| 26 | | |
-| 27 | | |
-| 28 | | |
+| 25 | 2026-08-01 | Artifact Output destinations: preview + managed-file (overwrite/timestamped) |
+| 26 | 2026-08-01 | Deterministic selectors: JSONPath + named sections; missing-data policies |
+| 27 | 2026-08-01 | Prompted Artifact Output projections (explicit second model call) |
+| 28 | 2026-08-01 | Tokens, cost, and run summary (rate table + estimated cost UI) |
+| 28.5 | 2026-08-01 | Skill Apply from library + dual resource-in handles |
 | 29 | | |
 | 30 | | |
 | 31 | | |

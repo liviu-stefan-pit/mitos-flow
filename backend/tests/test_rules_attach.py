@@ -96,7 +96,10 @@ def test_many_rules_one_skill_in_runner_and_trace():
         if e["nodeId"] == "skill-1" and e["type"] == "completed"
     ]
     assert len(skill_completed) == 1
-    assert skill_completed[0]["message"] == "Attached 2 rule(s): Types, Tone"
+    assert skill_completed[0]["message"] is not None
+    assert skill_completed[0]["message"].startswith(
+        "Attached 2 rule(s): Types, Tone"
+    )
     assert [r.rulesNodeId for r in skill_completed[0]["attachedRules"]] == [
         "rules-a",
         "rules-b",

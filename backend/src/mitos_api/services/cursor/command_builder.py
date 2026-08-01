@@ -190,14 +190,36 @@ def redact_text_secrets(text: str, secrets: Sequence[str]) -> str:
 
 
 def assemble_prompt(request: SkillExecutionRequest | CursorSkillPayload) -> str:
-    """Build the stdin / prompt body from a Skill execution request."""
-    sections: list[str] = [
+    """Build the stdin / prompt body from a Skill or prompted-output request."""
+    prompt_template = (getattr(request, "promptTemplate", None) or "").strip()
+    if prompt_template:
+        # Phase 27: prompted Artifact Output — explicit projection call.
+        sections: list[str] = [
+            f"# Prompted projection: {request.skillLabel}",
+            "## Prompt template",
+            prompt_template,
+            "## Upstream data",
+            _format_inputs(request),
+            "## Instructions\n"
+            "Apply the prompt template to the upstream data. Reply with the "
+            "projected artifact only.",
+        ]
+        return "\n\n".join(sections).strip() + "\n"
+
+    sections = [
         f"# Skill: {request.skillLabel}",
     ]
     description = (request.description or "").strip()
     if description:
         sections.append("## Description")
         sections.append(description)
+
+    content = (getattr(request, "content", None) or "").strip()
+    if content:
+        # Phase 28.5: applied SKILL.md body (Instructions body, not the
+        # closing operational directive below).
+        sections.append("## Instructions")
+        sections.append(content)
 
     if request.rules:
         sections.append("## Rules")
@@ -211,9 +233,9 @@ def assemble_prompt(request: SkillExecutionRequest | CursorSkillPayload) -> str:
     sections.append(_format_inputs(request))
 
     sections.append(
-        "## Instructions\n"
-        "Follow the skill description and rules. Use only the provided input "
-        "and knowledge. Reply with the skill result only."
+        "## Task\n"
+        "Follow the skill description, instructions, and rules. Use only the "
+        "provided input and knowledge. Reply with the skill result only."
     )
     return "\n\n".join(sections).strip() + "\n"
 

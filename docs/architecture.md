@@ -144,6 +144,68 @@ One **Artifact Output** node replaces separate Save and Output nodes.
 | `/api/cursor/models` | 24.5 | GET | List Cursor models (`agent --list-models`); default `composer-2.5` |
 | `/api/runs` | 23–24 | POST | Cursor via `options.runner=cursor` (whole-run) or per-Skill `settings.runner=cursor` |
 
+### Artifact Output destinations (Phase 25)
+
+| Destination | Behavior |
+| --- | --- |
+| `preview` | Passive: upstream bytes stay on the node/run result; no disk write |
+| `managedFile` | Write under `MITOS_OUTPUT_ROOT` (default `.mitos-flow-artifacts`) |
+
+Managed-file write modes:
+
+| Mode | Behavior |
+| --- | --- |
+| `overwrite` | Atomic replace of the relative `filePath` |
+| `timestamped` | Write `name-YYYYMMDDTHHMMSSZ.ext` beside the named path |
+
+Path traversal and absolute paths are rejected. Replacement uses same-directory temp + `os.replace`.
+
+### Deterministic selectors (Phase 26)
+
+Selector Artifact Outputs project upstream Skill bytes **without** a runner/model call.
+
+| Selector kind | Expression | Behavior |
+| --- | --- | --- |
+| `jsonPath` | Minimal JSONPath (`$.a.b`, `$.a[0]`, `$['key']`) | Extract field/value from JSON upstream |
+| `namedSection` | Markdown ATX heading text | Extract body under matching heading |
+
+Missing-data policies when the selector matches nothing:
+
+| Policy | Behavior |
+| --- | --- |
+| `skip` | Mark this output branch skipped; run may still complete |
+| `empty` | Deliver an empty artifact |
+| `warning` | Deliver a `WARNING: …` text artifact |
+| `fail` | Fail this output branch (and the run) |
+
+Pass-through, selector, and prompted modes may fan out together from one terminal Skill. Prompted projections are an explicit second runner/model call (Phase 27).
+
+### Prompted projections (Phase 27)
+
+Prompted Artifact Outputs run a **second** model call with their own runner, model, timeout, and usage — never buried inside destination/file save.
+
+| Setting | Behavior |
+| --- | --- |
+| `promptTemplate` | Required first-class prompt text applied to upstream Skill bytes |
+| `runner` | `fake` or `cursor` for this projection only |
+| `model` | Cursor model when `runner=cursor` (default `composer-2.5`) |
+
+Fake prompted format: `fake::prompted::{label}::{promptTemplate}::{upstreamPayload}`.
+
+Gate shape: one Skill → pass-through + selector + prompted → **two** runner calls (Skill + prompted).
+
+### Tokens, cost, and run summary (Phase 28)
+
+Runner usage is normalized (`inputTokens` / `outputTokens` / `totalTokens`) and aggregated into a `RunSummary` on the run snapshot and terminal SSE event.
+
+Estimated cost uses a **versioned local rate table** (not live billing). When usage or pricing is unavailable, fields are null and the UI shows **unknown**. The UI always labels cost as an **estimate** — never as an exact charge.
+
+### Skill Apply from library + dual resource handles (Phase 28.5)
+
+Skill nodes mirror Rules/KB **Apply from library**: `content` (SKILL.md body) + `libraryAssetId`. Applied body is included in Cursor prompt assembly under `## Instructions`.
+
+Skills expose two amber resource-in handles — **top** (`resource-in-top`) and **bottom** (`resource-in`) — layout aliases only; attachment resolution is unchanged.
+
 ---
 
 ## Frontend architecture

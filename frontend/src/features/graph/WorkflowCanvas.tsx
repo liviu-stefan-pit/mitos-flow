@@ -33,7 +33,7 @@ import { edgeTypes } from "./edges";
 import { NodeInspector } from "./NodeInspector";
 import { NodePalette } from "./NodePalette";
 import { createNode } from "./nodeFactory";
-import type { SkillNodeData } from "./nodeData";
+import type { ArtifactOutputNodeData, SkillNodeData } from "./nodeData";
 import { nodeTypes } from "./nodes";
 import { nodeKindFromFlowType, type NodeKind } from "./nodeKinds";
 import { uiGraphToDomainWorkflow } from "./toDomainWorkflow";
@@ -247,9 +247,16 @@ function WorkflowCanvasInner() {
   const hasCursorSkill = useMemo(
     () =>
       nodes.some((node) => {
-        if (nodeKindFromFlowType(node.type) !== "skill") return false;
-        const data = node.data as SkillNodeData;
-        return data.runner === "cursor";
+        const kind = nodeKindFromFlowType(node.type);
+        if (kind === "skill") {
+          const data = node.data as SkillNodeData;
+          return data.runner === "cursor";
+        }
+        if (kind === "artifactOutput") {
+          const data = node.data as ArtifactOutputNodeData;
+          return data.mode === "prompted" && data.runner === "cursor";
+        }
+        return false;
       }),
     [nodes],
   );
@@ -261,11 +268,19 @@ function WorkflowCanvasInner() {
       return;
     }
     try {
-      const usesCursor = mapped.workflow.nodes.some(
-        (node) =>
-          node.kind === "skill" &&
-          (node.settings as { runner?: string }).runner === "cursor",
-      );
+      const usesCursor = mapped.workflow.nodes.some((node) => {
+        if (node.kind === "skill") {
+          return (node.settings as { runner?: string }).runner === "cursor";
+        }
+        if (node.kind === "artifactOutput") {
+          const settings = node.settings as {
+            mode?: string;
+            runner?: string;
+          };
+          return settings.mode === "prompted" && settings.runner === "cursor";
+        }
+        return false;
+      });
       if (usesCursor) {
         if (!window.confirm(CURSOR_RUN_CONFIRM)) {
           return;
@@ -475,6 +490,7 @@ function WorkflowCanvasInner() {
         events={workflowRun.events}
         selectedNodeId={selectedNode?.id ?? null}
         runStatus={workflowRun.status}
+        summary={workflowRun.summary}
       />
       {feedback ? (
         <div

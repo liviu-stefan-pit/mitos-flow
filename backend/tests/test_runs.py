@@ -452,13 +452,12 @@ def test_runs_endpoint_rejects_mixed_skill_and_output_branch():
     assert any(e["code"] == "unsupported_graph" for e in body["errors"])
 
 
-def test_runs_endpoint_rejects_mixed_output_modes():
+def test_runs_endpoint_rejects_empty_prompted_template_in_fan_out():
+    """Empty promptTemplate fails request validation (422)."""
     run_store.clear()
     payload = {"workflow": _load_fixture("unsupported_mixed_output_modes.json")}
-    body = _post_and_wait(payload)
-    assert body["status"] == "rejected"
-    assert any(e["code"] == "unsupported_graph" for e in body["errors"])
-    assert any("pass-through" in e["message"] for e in body["errors"])
+    response = client.post("/api/runs", json=payload)
+    assert response.status_code == 422
 
 
 def test_runs_endpoint_rejects_same_port_join():
@@ -470,13 +469,22 @@ def test_runs_endpoint_rejects_same_port_join():
     assert any("port" in e["message"] for e in body["errors"])
 
 
-def test_runs_endpoint_rejects_selector_output():
+def test_runs_endpoint_rejects_empty_prompt_template():
     run_store.clear()
-    payload = {"workflow": _load_fixture("unsupported_selector_output.json")}
+    payload = {"workflow": _load_fixture("unsupported_prompted_output.json")}
+    response = client.post("/api/runs", json=payload)
+    assert response.status_code == 422
+
+
+def test_runs_endpoint_runs_prompted_simple():
+    run_store.clear()
+    payload = {"workflow": _load_fixture("prompted_simple.json")}
     body = _post_and_wait(payload)
-    assert body["status"] == "rejected"
-    assert any(e["code"] == "unsupported_graph" for e in body["errors"])
-    assert any("pass-through" in e["message"] for e in body["errors"])
+    assert body["status"] == "completed"
+    by_id = _results_by_id(body)
+    assert by_id["output-1"]["state"] == "completed"
+    assert by_id["output-1"]["output"].startswith("fake::prompted::Rewrite::")
+    assert by_id["output-1"]["promptTemplate"] == "Rewrite as a one-line headline"
 
 
 def test_runs_endpoint_rejects_invalid_workflow():

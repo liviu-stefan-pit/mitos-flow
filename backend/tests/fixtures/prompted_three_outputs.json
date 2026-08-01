@@ -1,55 +1,64 @@
 {
   "metadata": {
-    "name": "Mixed fan-out with empty prompted template (invalid)",
+    "name": "Skill → pass-through + selector + prompted (2 model calls)",
     "schemaVersion": 1
   },
   "nodes": [
     {
       "id": "input-1",
       "kind": "input",
-      "label": "Brief",
+      "label": "JSON in",
       "position": { "x": 0, "y": 0 },
       "settings": {
-        "mediaType": "text/plain",
-        "content": "Hello from input"
+        "mediaType": "application/json",
+        "content": "{\"output\":{\"headline\":\"Extract me with JSONPath\",\"body\":\"full body for prompt\"}}"
       }
     },
     {
       "id": "skill-1",
       "kind": "skill",
-      "label": "Draft",
+      "label": "EmitJSON",
       "position": { "x": 220, "y": 0 },
       "settings": {
-        "description": "Draft the reply",
-        "joinPolicy": "wait_for_all"
+        "description": "Echo JSON",
+        "joinPolicy": "wait_for_all",
+        "runner": "fake"
       }
     },
     {
       "id": "output-1",
       "kind": "artifactOutput",
-      "label": "Out A",
+      "label": "Full",
       "position": { "x": 440, "y": -80 },
       "settings": {
-        "mode": "pass-through"
+        "mode": "pass-through",
+        "destination": "preview"
       }
     },
     {
       "id": "output-2",
       "kind": "artifactOutput",
-      "label": "Out B prompted",
+      "label": "Headline only",
       "position": { "x": 440, "y": 0 },
       "settings": {
-        "mode": "prompted",
-        "promptTemplate": ""
+        "mode": "selector",
+        "destination": "preview",
+        "selectorKind": "jsonPath",
+        "selectorExpression": "$.output.headline",
+        "missingDataPolicy": "fail"
       }
     },
     {
       "id": "output-3",
       "kind": "artifactOutput",
-      "label": "Out C",
+      "label": "Summary",
       "position": { "x": 440, "y": 80 },
       "settings": {
-        "mode": "pass-through"
+        "mode": "prompted",
+        "destination": "preview",
+        "promptTemplate": "Summarize the upstream skill result as a short blurb",
+        "runner": "fake",
+        "model": "composer-2.5"
       }
     }
   ],

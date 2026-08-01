@@ -1,0 +1,59 @@
+{
+  "metadata": {
+    "name": "Selector miss → skip",
+    "schemaVersion": 1
+  },
+  "nodes": [
+    {
+      "id": "input-1",
+      "kind": "input",
+      "label": "JSON in",
+      "position": { "x": 0, "y": 0 },
+      "settings": {
+        "mediaType": "application/json",
+        "content": "{\"output\":{\"headline\":\"present\"}}"
+      }
+    },
+    {
+      "id": "skill-1",
+      "kind": "skill",
+      "label": "EmitJSON",
+      "position": { "x": 220, "y": 0 },
+      "settings": {
+        "description": "Echo JSON",
+        "joinPolicy": "wait_for_all"
+      }
+    },
+    {
+      "id": "output-1",
+      "kind": "artifactOutput",
+      "label": "Missing field",
+      "position": { "x": 440, "y": 0 },
+      "settings": {
+        "mode": "selector",
+        "destination": "preview",
+        "selectorKind": "jsonPath",
+        "selectorExpression": "$.output.missing",
+        "missingDataPolicy": "skip"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "kind": "dataFlow",
+      "sourceNodeId": "input-1",
+      "targetNodeId": "skill-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    },
+    {
+      "id": "e2",
+      "kind": "dataFlow",
+      "sourceNodeId": "skill-1",
+      "targetNodeId": "output-1",
+      "sourcePortId": "data-out",
+      "targetPortId": "data-in"
+    }
+  ]
+}

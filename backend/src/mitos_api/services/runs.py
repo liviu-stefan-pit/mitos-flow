@@ -18,21 +18,36 @@ from mitos_api.domain.run import (
     RunEventType,
     RunOptions,
     RunResponse,
+    RunSummary,
+    RunnerKind,
 )
 from mitos_api.domain.validation import validate_workflow
-from mitos_api.domain.run import RunnerKind
 from mitos_api.domain.workflow import (
+    ArtifactDestinationKind,
+    ArtifactOutputMode,
+    ArtifactOutputNodeSettings,
     AttachedKnowledgeBase,
     AttachedRule,
     CitedChunk,
     DEFAULT_CURSOR_SKILL_MODEL,
     InputNodeSettings,
+    MissingDataPolicy,
     NodeKind,
     SkillNodeSettings,
     ValidationIssue,
     Workflow,
     WorkflowNode,
 )
+from mitos_api.services.artifacts import (
+    ArtifactWriteError,
+    SelectorError,
+    SelectorMatch,
+    SelectorMiss,
+    apply_selector,
+    resolve_missing_payload,
+    write_artifact,
+)
+from mitos_api.services.cost import build_run_summary, normalize_usage
 from mitos_api.services.kb.retrieval import (
     build_retrieval_query,
     retrieve_cited_chunks,
@@ -74,6 +89,184 @@ def _call_cleanup(runner: Runner, skill_node_id: str) -> None:
         cleanup(skill_node_id)
 
 
+def _deliver_artifact_output(
+    output_node: WorkflowNode,
+    *,
+    payload: str,
+    media_type: str,
+) -> NodeRunResult:
+    """
+    Deliver an Artifact Output after optional Phase 26 selection.
+
+    Preview: keep projected bytes in the node result (no disk write).
+    Managed file: write under the approved output root (overwrite or timestamped).
+    """
+    settings = output_node.settings
+    if not isinstance(settings, ArtifactOutputNodeSettings):
+        return NodeRunResult(
+            nodeId=output_node.id,
+            state=NodeRunState.FAILED,
+            error="Artifact Output node has invalid settings",
+        )
+
+    destination = settings.destination
+    if destination is ArtifactDestinationKind.PREVIEW:
+        return NodeRunResult(
+            nodeId=output_node.id,
+            state=NodeRunState.COMPLETED,
+            output=payload,
+            mediaType=media_type,
+        )
+
+    if destination is ArtifactDestinationKind.MANAGED_FILE:
+        try:
+            written = write_artifact(
+                payload,
+                relative_path=settings.filePath or "",
+                write_mode=settings.writeMode,
+            )
+        except ArtifactWriteError as exc:
+            return NodeRunResult(
+                nodeId=output_node.id,
+                state=NodeRunState.FAILED,
+                output=payload,
+                mediaType=media_type,
+                error=exc.message,
+            )
+        return NodeRunResult(
+            nodeId=output_node.id,
+            state=NodeRunState.COMPLETED,
+            output=payload,
+            mediaType=media_type,
+            artifactPath=written.relative_path,
+            artifactAbsolutePath=str(written.absolute_path),
+            bytesWritten=written.bytes_written,
+        )
+
+    return NodeRunResult(
+        nodeId=output_node.id,
+        state=NodeRunState.FAILED,
+        error=f"Unsupported artifact destination: {destination}",
+    )
+
+
+def _project_output_payload(
+    output_node: WorkflowNode,
+    *,
+    upstream_payload: str,
+    upstream_media_type: str,
+) -> tuple[str, str] | NodeRunResult:
+    """
+    Apply pass-through or Phase 26 selector projection.
+
+    Returns ``(payload, media_type)`` when delivery should proceed, or a
+    finished ``NodeRunResult`` for skip / fail missing-data policies (and
+    invalid selector configuration / expression errors).
+    """
+    settings = output_node.settings
+    if not isinstance(settings, ArtifactOutputNodeSettings):
+        return NodeRunResult(
+            nodeId=output_node.id,
+            state=NodeRunState.FAILED,
+            error="Artifact Output node has invalid settings",
+        )
+
+    if settings.mode is ArtifactOutputMode.PASS_THROUGH:
+        return upstream_payload, upstream_media_type
+
+    if settings.mode is ArtifactOutputMode.PROMPTED:
+        # Prompted projections are executed separately (second runner call).
+        return NodeRunResult(
+            nodeId=output_node.id,
+            state=NodeRunState.FAILED,
+            error="Prompted mode must be executed via runner, not projected passively",
+        )
+
+    if settings.mode is not ArtifactOutputMode.SELECTOR:
+        return NodeRunResult(
+            nodeId=output_node.id,
+            state=NodeRunState.FAILED,
+            error=f"Unsupported Artifact Output mode: {settings.mode.value}",
+        )
+
+    kind = settings.selectorKind
+    expression = (settings.selectorExpression or "").strip()
+    if kind is None or not expression:
+        return NodeRunResult(
+            nodeId=output_node.id,
+            state=NodeRunState.FAILED,
+            error="Selector requires selectorKind and selectorExpression",
+        )
+
+    try:
+        selected = apply_selector(
+            upstream_payload,
+            kind=kind,
+            expression=expression,
+            media_type=upstream_media_type,
+        )
+    except SelectorError as exc:
+        return NodeRunResult(
+            nodeId=output_node.id,
+            state=NodeRunState.FAILED,
+            error=exc.message,
+        )
+
+    if isinstance(selected, SelectorMatch):
+        return selected.payload, selected.media_type
+
+    assert isinstance(selected, SelectorMiss)
+    policy = settings.missingDataPolicy
+    if policy is MissingDataPolicy.SKIP:
+        reason = (
+            f"Selector {kind.value} '{expression}' matched no data "
+            f"({selected.reason}); skipped per missingDataPolicy"
+        )
+        return NodeRunResult(
+            nodeId=output_node.id,
+            state=NodeRunState.SKIPPED,
+            error=reason,
+        )
+    if policy is MissingDataPolicy.FAIL:
+        reason = (
+            f"Selector {kind.value} '{expression}' matched no data "
+            f"({selected.reason})"
+        )
+        return NodeRunResult(
+            nodeId=output_node.id,
+            state=NodeRunState.FAILED,
+            error=reason,
+        )
+
+    resolved_payload, resolved_media = resolve_missing_payload(
+        policy=policy,
+        kind=kind,
+        expression=expression,
+        reason=selected.reason,
+    )
+    if resolved_payload is None or resolved_media is None:
+        return NodeRunResult(
+            nodeId=output_node.id,
+            state=NodeRunState.FAILED,
+            error=selected.reason,
+        )
+    return resolved_payload, resolved_media
+
+
+def _artifact_write_mode_label(output_node: WorkflowNode) -> str:
+    settings = output_node.settings
+    if isinstance(settings, ArtifactOutputNodeSettings):
+        return settings.writeMode.value
+    return "unknown"
+
+
+def _artifact_mode_label(output_node: WorkflowNode) -> str:
+    settings = output_node.settings
+    if isinstance(settings, ArtifactOutputNodeSettings):
+        return settings.mode.value
+    return "unknown"
+
+
 def _skill_runner_kind(
     skill_node: WorkflowNode,
     options: RunOptions,
@@ -90,17 +283,42 @@ def _skill_runner_kind(
     return options.runner
 
 
+def _output_runner_kind(
+    output_node: WorkflowNode,
+    options: RunOptions,
+) -> RunnerKind:
+    """
+    Resolve Fake vs Cursor for one prompted Artifact Output (Phase 27).
+
+    Per-node ``settings.runner='cursor'`` selects Cursor. Whole-run
+    ``options.runner='cursor'`` still forces Cursor for prompted projections.
+    """
+    settings = output_node.settings
+    if (
+        isinstance(settings, ArtifactOutputNodeSettings)
+        and settings.runner == "cursor"
+    ):
+        return "cursor"
+    return options.runner
+
+
 def _workflow_needs_cursor(workflow: Workflow, options: RunOptions) -> bool:
     if options.runner == "cursor":
         return True
     for node in workflow.nodes:
-        if node.kind != NodeKind.SKILL:
-            continue
-        if (
-            isinstance(node.settings, SkillNodeSettings)
-            and node.settings.runner == "cursor"
-        ):
-            return True
+        if node.kind is NodeKind.SKILL:
+            if (
+                isinstance(node.settings, SkillNodeSettings)
+                and node.settings.runner == "cursor"
+            ):
+                return True
+        elif node.kind is NodeKind.ARTIFACT_OUTPUT:
+            if (
+                isinstance(node.settings, ArtifactOutputNodeSettings)
+                and node.settings.mode is ArtifactOutputMode.PROMPTED
+                and node.settings.runner == "cursor"
+            ):
+                return True
     return False
 
 
@@ -119,6 +337,29 @@ def _resolve_skill_model(
         skill_model = (settings.model or "").strip()
         if skill_model:
             return skill_model
+    cursor_opts = options.cursor
+    if cursor_opts is not None:
+        run_model = (cursor_opts.model or "").strip()
+        if run_model:
+            return run_model
+    return DEFAULT_CURSOR_SKILL_MODEL
+
+
+def _resolve_output_model(
+    output_node: WorkflowNode,
+    options: RunOptions,
+) -> str:
+    """
+    Resolve the Cursor model for one prompted Artifact Output (Phase 27).
+
+    Output ``settings.model`` wins; then run-level ``options.cursor.model``;
+    finally ``composer-2.5``. Never returns empty.
+    """
+    settings = output_node.settings
+    if isinstance(settings, ArtifactOutputNodeSettings):
+        output_model = (settings.model or "").strip()
+        if output_model:
+            return output_model
     cursor_opts = options.cursor
     if cursor_opts is not None:
         run_model = (cursor_opts.model or "").strip()
@@ -162,19 +403,24 @@ def execute_run(
     Execute a Phase-14-supported graph, optionally emitting live events.
 
     Supported shape: one or more Inputs → Skills (linear path and/or
-    wait_for_all joins on named ports) → one or more pass-through Artifact
-    Outputs. Skills run in topological order; each Skill waits for every
-    declared data-in port. Phase 18 resolves Rules resource attachments into
-    the Skill runner request (ordered, de-duplicated). Phase 19 resolves
-    Knowledge Base attachments and runs deterministic keyword retrieval so
-    cited chunks are available to the runner and run trace. Phase 20 applies
+    wait_for_all joins on named ports) → one or more Artifact Outputs
+    (pass-through, Phase 26 selectors, or Phase 27 prompted projections).
+    Skills run in topological order; each Skill waits for every declared
+    data-in port. Phase 18 resolves Rules resource attachments into the Skill
+    runner request (ordered, de-duplicated). Phase 19 resolves Knowledge Base
+    attachments and runs deterministic keyword retrieval so cited chunks
+    are available to the runner and run trace. Phase 20 applies
     per-attachment top-K / threshold and records the retrieval query in the
     Skill run trace. Phase 24 selects Fake or Cursor per Skill via
-    ``settings.runner`` (scheduler semantics unchanged). Failure, timeout,
+    ``settings.runner`` (scheduler semantics unchanged). Phase 26 applies
+    JSONPath / named-section selectors on Artifact Outputs with zero extra
+    runner calls. Phase 27 executes prompted outputs as an explicit second
+    runner call with their own runner/model/timeout/usage. Failure, timeout,
     blocked join, or cancel stops the chain so no downstream node starts.
 
     When ``runner`` is provided without ``cursor_runner``, that single runner
-    is used for every Skill (test injection / Phase 23 whole-run).
+    is used for every Skill and prompted output (test injection / Phase 23
+    whole-run).
     """
     rid = run_id or str(uuid.uuid4())
     opts = options or RunOptions()
@@ -188,7 +434,7 @@ def execute_run(
     active_cursor: Runner | None = cursor_runner
     cancel_check: CancelCheck = is_cancelled or (lambda: False)
 
-    def pick_runner(skill_node: WorkflowNode) -> Runner:
+    def pick_runner_for_skill(skill_node: WorkflowNode) -> Runner:
         if forced_runner is not None:
             return forced_runner
         kind = _skill_runner_kind(skill_node, opts)
@@ -197,6 +443,19 @@ def execute_run(
                 raise RuntimeError(
                     f"Cursor runner required for Skill '{skill_node.id}' "
                     "but was not resolved."
+                )
+            return active_cursor
+        return fake_runner
+
+    def pick_runner_for_output(output_node: WorkflowNode) -> Runner:
+        if forced_runner is not None:
+            return forced_runner
+        kind = _output_runner_kind(output_node, opts)
+        if kind == "cursor":
+            if active_cursor is None:
+                raise RuntimeError(
+                    f"Cursor runner required for prompted Output "
+                    f"'{output_node.id}' but was not resolved."
                 )
             return active_cursor
         return fake_runner
@@ -219,6 +478,11 @@ def execute_run(
         elapsed_ms: int | None = None,
         usage: RunnerUsage | None = None,
         model: str | None = None,
+        artifact_path: str | None = None,
+        artifact_absolute_path: str | None = None,
+        bytes_written: int | None = None,
+        prompt_template: str | None = None,
+        summary: RunSummary | None = None,
     ) -> None:
         if on_event is not None:
             on_event(
@@ -238,6 +502,11 @@ def execute_run(
                 elapsed_ms=elapsed_ms,
                 usage=usage,
                 model=model,
+                artifact_path=artifact_path,
+                artifact_absolute_path=artifact_absolute_path,
+                bytes_written=bytes_written,
+                prompt_template=prompt_template,
+                summary=summary,
             )
 
     validation = validate_workflow(workflow)
@@ -405,11 +674,13 @@ def execute_run(
                 error=msg,
             )
         finalize_unused_resources()
+        summary = build_run_summary(node_results)
         emit(
             RunEventType.CANCELLED,
             scope=RunEventScope.RUN,
             message=reason,
             error=reason,
+            summary=summary,
         )
         return RunResponse(
             id=rid,
@@ -421,6 +692,7 @@ def execute_run(
                     message=reason,
                 )
             ],
+            summary=summary,
         )
 
     def mark_failed_remaining(
@@ -469,17 +741,20 @@ def execute_run(
                 error=reason,
             )
         finalize_unused_resources()
+        summary = build_run_summary(node_results)
         emit(
             event_type if event_type is RunEventType.FAILED else RunEventType.FAILED,
             scope=RunEventScope.RUN,
             message=issue.message,
             error=issue.message,
+            summary=summary,
         )
         return RunResponse(
             id=rid,
             status="failed",
             nodeResults=node_results,
             errors=[issue],
+            summary=summary,
         )
 
     # Complete Inputs first (deterministic id order from the plan).
@@ -545,7 +820,7 @@ def execute_run(
             )
 
         skill_node = remaining_skills.pop(0)
-        active_runner = pick_runner(skill_node)
+        active_runner = pick_runner_for_skill(skill_node)
         emit(RunEventType.QUEUED, node_id=skill_node.id)
 
         envelopes, blocked = collect_input_envelopes(
@@ -646,6 +921,7 @@ def execute_run(
                     skillNodeId=skill_node.id,
                     skillLabel=skill_node.label,
                     description=getattr(skill_node.settings, "description", "") or "",
+                    content=getattr(skill_node.settings, "content", "") or "",
                     inputPayload=primary.payload,
                     inputMediaType=primary.mediaType,
                     inputs=envelopes,
@@ -751,7 +1027,7 @@ def execute_run(
         if resolved_model:
             message_parts.append(f"model {resolved_model}")
         if skill_result.usage is not None:
-            usage = skill_result.usage
+            usage = normalize_usage(skill_result.usage) or skill_result.usage
             token_bits: list[str] = []
             if usage.inputTokens is not None:
                 token_bits.append(f"in={usage.inputTokens}")
@@ -761,6 +1037,8 @@ def execute_run(
                 token_bits.append(f"total={usage.totalTokens}")
             if token_bits:
                 message_parts.append(f"usage [{', '.join(token_bits)}]")
+        else:
+            usage = None
         skill_message = "; ".join(message_parts) if message_parts else None
         node_results.append(
             NodeRunResult(
@@ -775,7 +1053,7 @@ def execute_run(
                 stderr=skill_result.stderr,
                 exitCode=skill_result.exitCode,
                 elapsedMs=skill_result.elapsedMs,
-                usage=skill_result.usage,
+                usage=usage,
                 model=resolved_model,
             )
         )
@@ -795,7 +1073,7 @@ def execute_run(
             stderr=skill_result.stderr,
             exit_code=skill_result.exitCode,
             elapsed_ms=skill_result.elapsedMs,
-            usage=skill_result.usage,
+            usage=usage,
             model=resolved_model,
         )
 
@@ -805,7 +1083,8 @@ def execute_run(
             reason="Run cancelled before outputs completed",
         )
 
-    # Passive Artifact Outputs: each branch gets the same upstream payload.
+    # Artifact Outputs: pass-through / selector project passively; prompted
+    # projections make an explicit second runner call (Phase 27).
     terminal_payload, terminal_media = completed_outputs[plan.skill_nodes[-1].id]
     for output_node in plan.output_nodes:
         if cancel_check():
@@ -852,11 +1131,13 @@ def execute_run(
                     error=reason,
                 )
             finalize_unused_resources()
+            summary = build_run_summary(node_results)
             emit(
                 RunEventType.CANCELLED,
                 scope=RunEventScope.RUN,
                 message="Run cancelled during output fan-out",
                 error="Run cancelled during output fan-out",
+                summary=summary,
             )
             return RunResponse(
                 id=rid,
@@ -868,30 +1149,297 @@ def execute_run(
                         message="Run cancelled during output fan-out",
                     )
                 ],
+                summary=summary,
             )
 
-        node_results.append(
-            NodeRunResult(
-                nodeId=output_node.id,
-                state=NodeRunState.COMPLETED,
-                output=terminal_payload,
-                mediaType=terminal_media,
+        output_settings = output_node.settings
+        if (
+            isinstance(output_settings, ArtifactOutputNodeSettings)
+            and output_settings.mode is ArtifactOutputMode.PROMPTED
+        ):
+            prompt_template = (output_settings.promptTemplate or "").strip()
+            if not prompt_template:
+                result = NodeRunResult(
+                    nodeId=output_node.id,
+                    state=NodeRunState.FAILED,
+                    error="Prompted Artifact Output requires promptTemplate",
+                )
+                node_results.append(result)
+                emit(
+                    RunEventType.FAILED,
+                    node_id=output_node.id,
+                    error=result.error,
+                    message=result.error,
+                )
+                continue
+
+            active_output_runner = pick_runner_for_output(output_node)
+            runner_kind = (
+                _output_runner_kind(output_node, opts)
+                if forced_runner is None
+                else (
+                    "cursor"
+                    if isinstance(active_output_runner, CursorRunner)
+                    else opts.runner
+                )
             )
+            resolved_model = (
+                _resolve_output_model(output_node, opts)
+                if runner_kind == "cursor"
+                or isinstance(active_output_runner, CursorRunner)
+                else None
+            )
+            try:
+                projection_result = _execute_skill_with_timeout(
+                    active_output_runner,
+                    SkillExecutionRequest(
+                        skillNodeId=output_node.id,
+                        skillLabel=output_node.label,
+                        description=prompt_template,
+                        inputPayload=terminal_payload,
+                        inputMediaType=terminal_media,
+                        inputs=[],
+                        model=resolved_model,
+                        promptTemplate=prompt_template,
+                    ),
+                    timeout_ms=opts.nodeTimeoutMs,
+                )
+            except TimeoutError as exc:
+                msg = str(exc)
+                node_results.append(
+                    NodeRunResult(
+                        nodeId=output_node.id,
+                        state=NodeRunState.TIMEOUT,
+                        error=msg,
+                        promptTemplate=prompt_template,
+                        model=resolved_model,
+                    )
+                )
+                emit(
+                    RunEventType.TIMEOUT,
+                    node_id=output_node.id,
+                    message=msg,
+                    error=msg,
+                    prompt_template=prompt_template,
+                    model=resolved_model,
+                )
+                _call_cleanup(active_output_runner, output_node.id)
+                continue
+            except Exception as exc:
+                node_results.append(
+                    NodeRunResult(
+                        nodeId=output_node.id,
+                        state=NodeRunState.FAILED,
+                        error=str(exc),
+                        promptTemplate=prompt_template,
+                        model=resolved_model,
+                    )
+                )
+                emit(
+                    RunEventType.FAILED,
+                    node_id=output_node.id,
+                    message=str(exc),
+                    error=str(exc),
+                    prompt_template=prompt_template,
+                    model=resolved_model,
+                )
+                _call_cleanup(active_output_runner, output_node.id)
+                continue
+
+            _call_cleanup(active_output_runner, output_node.id)
+            branch_payload = projection_result.outputPayload
+            branch_media = projection_result.mediaType or "text/plain"
+            result = _deliver_artifact_output(
+                output_node,
+                payload=branch_payload,
+                media_type=branch_media,
+            )
+            # Attach projection capture metadata onto the delivered result.
+            normalized_usage = normalize_usage(projection_result.usage)
+            result = result.model_copy(
+                update={
+                    "promptTemplate": prompt_template,
+                    "stdout": projection_result.stdout,
+                    "stderr": projection_result.stderr,
+                    "exitCode": projection_result.exitCode,
+                    "elapsedMs": projection_result.elapsedMs,
+                    "usage": normalized_usage,
+                    "model": resolved_model or projection_result.model,
+                }
+            )
+            node_results.append(result)
+            if result.state is NodeRunState.FAILED:
+                emit(
+                    RunEventType.FAILED,
+                    node_id=output_node.id,
+                    output=result.output,
+                    media_type=result.mediaType,
+                    error=result.error,
+                    message=result.error,
+                    prompt_template=prompt_template,
+                    stdout=result.stdout,
+                    stderr=result.stderr,
+                    exit_code=result.exitCode,
+                    elapsed_ms=result.elapsedMs,
+                    usage=result.usage,
+                    model=result.model,
+                )
+            else:
+                mode_label = _artifact_mode_label(output_node)
+                if result.artifactPath is not None:
+                    message = (
+                        f"{mode_label}: wrote {result.bytesWritten} bytes to "
+                        f"{result.artifactPath} "
+                        f"({_artifact_write_mode_label(output_node)}); "
+                        f"prompt applied"
+                    )
+                else:
+                    message = (
+                        f"{mode_label}: preview (no file write); prompt applied"
+                    )
+                emit(
+                    RunEventType.COMPLETED,
+                    node_id=output_node.id,
+                    output=result.output,
+                    media_type=result.mediaType,
+                    message=message,
+                    artifact_path=result.artifactPath,
+                    artifact_absolute_path=result.artifactAbsolutePath,
+                    bytes_written=result.bytesWritten,
+                    prompt_template=prompt_template,
+                    stdout=result.stdout,
+                    stderr=result.stderr,
+                    exit_code=result.exitCode,
+                    elapsed_ms=result.elapsedMs,
+                    usage=result.usage,
+                    model=result.model,
+                )
+            continue
+
+        projected = _project_output_payload(
+            output_node,
+            upstream_payload=terminal_payload,
+            upstream_media_type=terminal_media,
         )
+        if isinstance(projected, NodeRunResult):
+            result = projected
+            node_results.append(result)
+            if result.state is NodeRunState.SKIPPED:
+                emit(
+                    RunEventType.SKIPPED,
+                    node_id=output_node.id,
+                    message=result.error,
+                    error=result.error,
+                )
+            else:
+                emit(
+                    RunEventType.FAILED,
+                    node_id=output_node.id,
+                    output=result.output,
+                    media_type=result.mediaType,
+                    error=result.error,
+                    message=result.error,
+                )
+            continue
+
+        branch_payload, branch_media = projected
+        result = _deliver_artifact_output(
+            output_node,
+            payload=branch_payload,
+            media_type=branch_media,
+        )
+        node_results.append(result)
+        if result.state is NodeRunState.FAILED:
+            emit(
+                RunEventType.FAILED,
+                node_id=output_node.id,
+                output=result.output,
+                media_type=result.mediaType,
+                error=result.error,
+                message=result.error,
+            )
+        else:
+            mode_label = _artifact_mode_label(output_node)
+            if result.artifactPath is not None:
+                message = (
+                    f"{mode_label}: wrote {result.bytesWritten} bytes to "
+                    f"{result.artifactPath} "
+                    f"({_artifact_write_mode_label(output_node)})"
+                )
+            else:
+                message = f"{mode_label}: preview (no file write)"
+            emit(
+                RunEventType.COMPLETED,
+                node_id=output_node.id,
+                output=result.output,
+                media_type=result.mediaType,
+                message=message,
+                artifact_path=result.artifactPath,
+                artifact_absolute_path=result.artifactAbsolutePath,
+                bytes_written=result.bytesWritten,
+            )
+
+    output_failures = [
+        r
+        for r in node_results
+        if r.nodeId in {o.id for o in plan.output_nodes}
+        and r.state
+        in (NodeRunState.FAILED, NodeRunState.TIMEOUT)
+    ]
+    finalize_unused_resources()
+    if output_failures:
+        first = output_failures[0]
+        fail_code = (
+            "selector_miss"
+            if (first.error or "").startswith("Selector ")
+            else "artifact_write_failed"
+        )
+        if first.state is NodeRunState.TIMEOUT:
+            fail_code = "timeout"
+        elif first.error and "JSONPath selector requires" in first.error:
+            fail_code = "selector_error"
+        elif first.error and first.error.startswith("Invalid JSONPath"):
+            fail_code = "selector_error"
+        elif first.error and "Selector requires" in first.error:
+            fail_code = "selector_error"
+        elif first.error and "promptTemplate" in (first.error or ""):
+            fail_code = "prompted_projection_failed"
+        elif first.promptTemplate is not None and first.state is NodeRunState.FAILED:
+            fail_code = "prompted_projection_failed"
+        summary = build_run_summary(node_results)
         emit(
-            RunEventType.COMPLETED,
-            node_id=output_node.id,
+            RunEventType.FAILED,
+            scope=RunEventScope.RUN,
+            message=first.error or "Artifact Output failed",
+            error=first.error,
             output=terminal_payload,
             media_type=terminal_media,
+            summary=summary,
+        )
+        return RunResponse(
+            id=rid,
+            status="failed",
+            nodeResults=node_results,
+            errors=[
+                ValidationIssue(
+                    code=fail_code,
+                    message=first.error or "Artifact Output failed",
+                    nodeId=first.nodeId,
+                )
+            ],
+            output=terminal_payload,
+            mediaType=terminal_media,
+            summary=summary,
         )
 
-    finalize_unused_resources()
+    summary = build_run_summary(node_results)
     emit(
         RunEventType.COMPLETED,
         scope=RunEventScope.RUN,
         message="Run completed",
         output=terminal_payload,
         media_type=terminal_media,
+        summary=summary,
     )
     return RunResponse(
         id=rid,
@@ -899,6 +1447,7 @@ def execute_run(
         nodeResults=node_results,
         output=terminal_payload,
         mediaType=terminal_media,
+        summary=summary,
     )
 
 
@@ -955,8 +1504,9 @@ def _resolve_runners(
     Returns ``(fake_or_forced, cursor_or_none)``:
     - When ``explicit`` is set, it is used as a whole-run forced runner
       (second element None) — Phase 23 / test injection.
-    - Otherwise Fake is always available; Cursor is built when any Skill
-      needs it (``options.runner='cursor'`` or ``settings.runner='cursor'``).
+    - Otherwise Fake is always available; Cursor is built when any Skill or
+      prompted Artifact Output needs it (``options.runner='cursor'`` or
+      ``settings.runner='cursor'``).
     """
     if explicit is not None:
         return (explicit, None)
@@ -1051,6 +1601,7 @@ def start_run(
                 errors=result.errors,
                 output=result.output,
                 media_type=result.mediaType,
+                summary=result.summary,
             )
         except Exception as exc:  # pragma: no cover - defensive
             active_store.append_event(

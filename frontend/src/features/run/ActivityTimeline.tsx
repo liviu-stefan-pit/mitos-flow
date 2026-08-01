@@ -1,16 +1,36 @@
-import type { RunEvent } from "../../domain/run";
+import type { RunEvent, RunSummary } from "../../domain/run";
 import "./ActivityTimeline.css";
 
 type ActivityTimelineProps = {
   events: RunEvent[];
   selectedNodeId: string | null;
   runStatus: string;
+  summary?: RunSummary | null;
 };
+
+function formatTokens(value: number | null | undefined): string {
+  return value == null ? "unknown" : String(value);
+}
+
+function formatEstimatedCost(summary: RunSummary): string {
+  if (summary.estimatedCostUsd == null) {
+    return "unknown";
+  }
+  // Always label as estimate — never present as an exact charge.
+  const amount = summary.estimatedCostUsd.toLocaleString(undefined, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  });
+  return `est. ${amount}`;
+}
 
 export function ActivityTimeline({
   events,
   selectedNodeId,
   runStatus,
+  summary = null,
 }: ActivityTimelineProps) {
   const filtered = selectedNodeId
     ? events.filter(
@@ -24,6 +44,12 @@ export function ActivityTimeline({
               event.type === "cancelled")),
       )
     : events;
+
+  const showSummary =
+    summary != null &&
+    (runStatus === "completed" ||
+      runStatus === "failed" ||
+      runStatus === "cancelled");
 
   return (
     <aside
@@ -40,6 +66,49 @@ export function ActivityTimeline({
           {runStatus}
         </span>
       </div>
+      {showSummary ? (
+        <div
+          className="activity-run-summary"
+          data-testid="activity-run-summary"
+          role="region"
+          aria-label="Run summary"
+        >
+          <div className="activity-run-summary-title">Run summary</div>
+          <dl className="activity-run-summary-stats">
+            <div>
+              <dt>Input tokens</dt>
+              <dd data-testid="summary-input-tokens">
+                {formatTokens(summary.inputTokens)}
+              </dd>
+            </div>
+            <div>
+              <dt>Output tokens</dt>
+              <dd data-testid="summary-output-tokens">
+                {formatTokens(summary.outputTokens)}
+              </dd>
+            </div>
+            <div>
+              <dt>Total tokens</dt>
+              <dd data-testid="summary-total-tokens">
+                {formatTokens(summary.totalTokens)}
+              </dd>
+            </div>
+            <div>
+              <dt>Estimated cost</dt>
+              <dd data-testid="summary-estimated-cost">
+                {formatEstimatedCost(summary)}
+              </dd>
+            </div>
+          </dl>
+          <p
+            className="activity-run-summary-disclaimer"
+            data-testid="summary-disclaimer"
+          >
+            {summary.disclaimer ??
+              "Estimated cost from a local rate table — not an exact charge."}
+          </p>
+        </div>
+      ) : null}
       {selectedNodeId ? (
         <p className="activity-timeline-filter" data-testid="activity-filter">
           Showing events for selected node + run lifecycle
@@ -153,6 +222,28 @@ export function ActivityTimeline({
                         event.usage?.outputTokens != null
                       ? ` · tokens in=${event.usage.inputTokens ?? "?"} out=${event.usage.outputTokens ?? "?"}`
                       : null}
+                </span>
+              ) : null}
+              {event.artifactPath ? (
+                <span
+                  className="activity-event-artifact"
+                  data-testid="activity-artifact-path"
+                  title={event.artifactAbsolutePath ?? event.artifactPath}
+                >
+                  Saved {event.bytesWritten != null ? `${event.bytesWritten} bytes → ` : ""}
+                  {event.artifactPath}
+                </span>
+              ) : null}
+              {event.promptTemplate ? (
+                <span
+                  className="activity-event-prompt"
+                  data-testid="activity-prompt-template"
+                  title={event.promptTemplate}
+                >
+                  Prompt:{" "}
+                  {event.promptTemplate.length > 60
+                    ? `${event.promptTemplate.slice(0, 60)}…`
+                    : event.promptTemplate}
                 </span>
               ) : null}
               {event.error ? (

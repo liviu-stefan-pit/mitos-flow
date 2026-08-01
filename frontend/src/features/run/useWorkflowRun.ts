@@ -5,6 +5,7 @@ import type {
   RunEvent,
   RunOptions,
   RunStatus,
+  RunSummary,
 } from "../../domain/run";
 import { DEFAULT_LIVE_DELAY_MS } from "../../domain/run";
 import type { Workflow } from "../../domain/workflow";
@@ -24,6 +25,7 @@ export type WorkflowRunState = {
   output: string | null;
   errorMessage: string | null;
   isLive: boolean;
+  summary: RunSummary | null;
 };
 
 const initialState: WorkflowRunState = {
@@ -35,6 +37,7 @@ const initialState: WorkflowRunState = {
   output: null,
   errorMessage: null,
   isLive: false,
+  summary: null,
 };
 
 function applyEvent(
@@ -51,6 +54,7 @@ function applyEvent(
   let status = prev.status;
   let output = prev.output;
   let errorMessage = prev.errorMessage;
+  let summary = prev.summary;
   const activeEdgeNodeIds = new Set(prev.activeEdgeNodeIds);
 
   if (event.scope === "run") {
@@ -60,16 +64,19 @@ function applyEvent(
       status = "completed";
       output = event.output ?? output;
       activeEdgeNodeIds.clear();
+      if (event.summary) summary = event.summary;
     }
     if (event.type === "failed") {
       status = "failed";
       errorMessage = event.error ?? event.message ?? "Run failed";
       activeEdgeNodeIds.clear();
+      if (event.summary) summary = event.summary;
     }
     if (event.type === "cancelled") {
       status = "cancelled";
       errorMessage = event.message ?? "Run cancelled";
       activeEdgeNodeIds.clear();
+      if (event.summary) summary = event.summary;
     }
   }
 
@@ -111,6 +118,7 @@ function applyEvent(
     output,
     errorMessage,
     activeEdgeNodeIds,
+    summary,
   };
 }
 

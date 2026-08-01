@@ -175,19 +175,20 @@ def test_collect_envelopes_missing_port_blocks():
     assert err.nodeId == "skill-1"
 
 
-def test_plan_rejects_selector_output():
-    plan, errors = plan_linear_chain(_load("unsupported_selector_output.json"))
-    assert plan is None
-    assert any("pass-through" in e.message for e in errors)
+def test_plan_accepts_prompted_output():
+    plan, errors = plan_linear_chain(_load("prompted_simple.json"))
+    assert errors == []
+    assert plan is not None
+    assert plan.output_nodes[0].settings.mode.value == "prompted"
 
 
-def test_plan_rejects_mixed_output_modes_in_fan_out():
-    """One non-pass-through among multiple outputs rejects the whole plan."""
-    plan, errors = plan_linear_chain(_load("unsupported_mixed_output_modes.json"))
-    assert plan is None
-    assert any(e.code == "unsupported_graph" for e in errors)
-    assert any("pass-through" in e.message for e in errors)
-    assert any(e.nodeId == "output-2" for e in errors)
+def test_plan_accepts_mixed_output_modes_in_fan_out():
+    """Pass-through + selector + prompted fan-out is supported (Phase 27)."""
+    plan, errors = plan_linear_chain(_load("prompted_three_outputs.json"))
+    assert errors == []
+    assert plan is not None
+    modes = {n.settings.mode.value for n in plan.output_nodes}
+    assert modes == {"pass-through", "selector", "prompted"}
 
 
 def test_input_envelope_model_round_trip():

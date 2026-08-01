@@ -1,5 +1,6 @@
 node_modules/
 .mitos-flow-library/
+.mitos-flow-artifacts/
 test-results/
 playwright-report/
 e2e/_debug-screenshot.png

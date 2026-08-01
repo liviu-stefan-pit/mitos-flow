@@ -93,6 +93,46 @@ class RunRequest(BaseModel):
     options: RunOptions = Field(default_factory=RunOptions)
 
 
+class UsageCallSummary(BaseModel):
+    """One model-call contribution inside a run summary (Phase 28)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    nodeId: str
+    model: str | None = None
+    inputTokens: int | None = None
+    outputTokens: int | None = None
+    totalTokens: int | None = None
+    estimatedCostUsd: float | None = None
+    source: str | None = None
+
+
+class RunSummary(BaseModel):
+    """
+    Aggregated tokens + estimated cost for a run (Phase 28).
+
+    Null token / cost fields mean unavailable — UI must show \"unknown\".
+    When ``estimatedCostUsd`` is set it is always an estimate
+    (``costIsEstimate`` is always true; see ``disclaimer``).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    inputTokens: int | None = None
+    outputTokens: int | None = None
+    totalTokens: int | None = None
+    estimatedCostUsd: float | None = None
+    costIsEstimate: bool = True
+    rateTableVersion: int | None = None
+    disclaimer: str = (
+        "Estimated cost from a local rate table — not an exact charge."
+    )
+    usageAvailable: bool = False
+    pricingAvailable: bool = False
+    callCount: int = 0
+    calls: list[UsageCallSummary] = Field(default_factory=list)
+
+
 class NodeRunResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -110,8 +150,14 @@ class NodeRunResult(BaseModel):
     exitCode: int | None = None
     elapsedMs: int | None = None
     usage: RunnerUsage | None = None
-    # Phase 24.5 — model used for this Cursor Skill
+    # Phase 24.5 — model used for this Cursor Skill / prompted output
     model: str | None = None
+    # Phase 25 — Artifact Output destination write result
+    artifactPath: str | None = None
+    artifactAbsolutePath: str | None = None
+    bytesWritten: int | None = None
+    # Phase 27 — prompt template used for prompted projection
+    promptTemplate: str | None = None
 
 
 class RunEvent(BaseModel):
@@ -138,6 +184,13 @@ class RunEvent(BaseModel):
     elapsedMs: int | None = None
     usage: RunnerUsage | None = None
     model: str | None = None
+    artifactPath: str | None = None
+    artifactAbsolutePath: str | None = None
+    bytesWritten: int | None = None
+    # Phase 27 — prompt template for prompted projection events
+    promptTemplate: str | None = None
+    # Phase 28 — tokens / estimated cost (terminal run-scoped events)
+    summary: RunSummary | None = None
     timestamp: str
 
 
@@ -153,6 +206,8 @@ class RunResponse(BaseModel):
     output: str | None = None
     mediaType: str | None = None
     events: list[RunEvent] = Field(default_factory=list)
+    # Phase 28 — aggregated tokens + estimated cost
+    summary: RunSummary | None = None
 
 
 class CancelRunResponse(BaseModel):
