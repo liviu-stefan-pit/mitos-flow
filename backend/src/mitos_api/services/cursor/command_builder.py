@@ -442,8 +442,8 @@ def dry_run_cursor_command(
             confirmationRequired=True,
             confirmed=False,
             message=(
-                "Review the redacted command preview, then confirm before a "
-                "real Cursor spawn (Phase 23)."
+                "Review the redacted command preview, then confirm and run "
+                "with options.runner='cursor' (Phase 23)."
             ),
             spawned=False,
         )
@@ -455,8 +455,9 @@ def dry_run_cursor_command(
         confirmationRequired=True,
         confirmed=True,
         message=(
-            "Command preview confirmed. Spawning is deferred to Phase 23 "
-            "(dry-run only)."
+            "Command preview confirmed. Start a run with "
+            "options.runner='cursor' and options.cursor.confirmed=true "
+            "to spawn the Cursor CLI."
         ),
         spawned=False,
     )

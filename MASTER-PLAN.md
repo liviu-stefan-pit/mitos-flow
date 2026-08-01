@@ -3,7 +3,7 @@
 > **Purpose of this document:** Single source of truth for what Mitos Flow is, how it should be built, and which phase is done. Update checkboxes as phases complete. Point every implementation chat at this file first.
 
 **Last updated:** 2026-08-01  
-**Current phase:** 23 (next)  
+**Current phase:** 25 (next)  
 **Stack:** Local React/Vite frontend + FastAPI backend · Cursor CLI first · Fake runner before real CLI
 
 ---
@@ -118,7 +118,7 @@ Rules:
 | Deterministic execution | 11–16 | [x] |
 | Reusable local assets | 17–20 | [x] |
 | Regression harness | 20.5 | [x] |
-| Cursor CLI adapter | 21–24 | [ ] |
+| Cursor CLI adapter | 21–24 | [x] |
 | Artifact outputs & observability | 25–28 | [ ] |
 | Portability & hardening | 29–31 | [ ] |
 
@@ -291,13 +291,13 @@ Rules:
   - **Gate:** Argument construction, Windows quoting, secret redaction, path checks unit-tested
   - **Manual check:** Preview shows redacted command before run
 
-- [ ] **Phase 23 — Execute one Cursor Skill**
+- [x] **Phase 23 — Execute one Cursor Skill**
   - Spawn Cursor for Input → Skill → passive Output
   - Capture stdout, stderr, exit status, elapsed time, usage metadata when available
   - **Gate:** One manual fixture end-to-end; failure/timeout tests use stub executable
   - **Manual check:** Run one real Cursor Skill flow successfully
 
-- [ ] **Phase 24 — Cursor execution for chains and joins**
+- [x] **Phase 24 — Cursor execution for chains and joins**
   - Per-node selectable Fake or Cursor runner; scheduler semantics unchanged
   - **Gate:** Two-Skill chain + two-input join complete; only manual smoke uses real tokens
   - **Manual check:** Multi-node flow with Cursor on one node
@@ -447,8 +447,8 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 20.5 | 2026-08-01 | Fake-run regression harness: API stories + slim Playwright (import/run/trace/cancel) |
 | 21 | 2026-08-01 | Cursor capability probe: GET /api/cursor/capability + Settings UI |
 | 22 | 2026-08-01 | Cursor command builder + dry-run preview (no spawn); redaction + workspace checks |
-| 23 | | |
-| 24 | | |
+| 23 | 2026-08-01 | CursorRunner spawn for Input→Skill→Output; capture + stub failure/timeout |
+| 24 | 2026-08-01 | Per-Skill Fake/Cursor runners; chain + join with stubs |
 | 25 | | |
 | 26 | | |
 | 27 | | |

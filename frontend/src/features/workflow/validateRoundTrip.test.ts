@@ -106,6 +106,7 @@ describe("schema round-trip via validate API", () => {
     expect(returned["skill-1"].settings).toEqual({
       description: "Condense the brief",
       joinPolicy: "wait_for_all",
+      runner: "fake",
     });
     expect(returned["output-1"].settings).toEqual({ mode: "prompted" });
   });

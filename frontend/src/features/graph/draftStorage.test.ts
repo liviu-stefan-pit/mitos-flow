@@ -167,7 +167,7 @@ describe("draft storage round-trip", () => {
       id: "skill-1",
       type: "skill",
       position: { x: 1, y: 2 },
-      data: { label: "Skill", description: "x" },
+      data: { label: "Skill", description: "x", runner: "fake" },
     });
   });
 });

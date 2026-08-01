@@ -3,6 +3,9 @@ import type { NodeKind } from "./nodeKinds";
 /** Artifact Output projection mode (execution comes in later phases). */
 export type ArtifactOutputMode = "pass-through" | "selector" | "prompted";
 
+/** Per-Skill runner (Phase 24). */
+export type SkillRunnerKind = "fake" | "cursor";
+
 export const ARTIFACT_OUTPUT_MODES: ArtifactOutputMode[] = [
   "pass-through",
   "selector",
@@ -18,6 +21,8 @@ export type InputNodeData = {
 export type SkillNodeData = {
   label: string;
   description: string;
+  /** Phase 24: Fake or Cursor for this Skill only. */
+  runner?: SkillRunnerKind;
 };
 
 export type KnowledgeBaseNodeData = {
@@ -51,7 +56,7 @@ export function defaultNodeData(kind: NodeKind, label: string): MitosNodeData {
     case "input":
       return { label, mediaType: "text/plain", content: "" };
     case "skill":
-      return { label, description: "" };
+      return { label, description: "", runner: "fake" };
     case "knowledgeBase":
       return { label, description: "", content: "", libraryAssetId: null };
     case "rules":

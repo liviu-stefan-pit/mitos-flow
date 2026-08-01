@@ -249,6 +249,38 @@ function SkillFields({
         />
       </label>
       <div className="node-inspector-field">
+        <span>Runner</span>
+        <div
+          className="node-inspector-runner"
+          role="radiogroup"
+          aria-label="Skill runner"
+          data-testid="inspector-runner-kind"
+        >
+          <label className="node-inspector-runner-option">
+            <input
+              type="radio"
+              name={`runner-${skillNodeId}`}
+              value="fake"
+              checked={(data.runner ?? "fake") === "fake"}
+              onChange={() => onPatch({ runner: "fake" })}
+              data-testid="inspector-runner-fake"
+            />
+            Fake
+          </label>
+          <label className="node-inspector-runner-option">
+            <input
+              type="radio"
+              name={`runner-${skillNodeId}`}
+              value="cursor"
+              checked={data.runner === "cursor"}
+              onChange={() => onPatch({ runner: "cursor" })}
+              data-testid="inspector-runner-cursor"
+            />
+            Cursor
+          </label>
+        </div>
+      </div>
+      <div className="node-inspector-field">
         <span>Join policy</span>
         <div
           className="node-inspector-readonly"

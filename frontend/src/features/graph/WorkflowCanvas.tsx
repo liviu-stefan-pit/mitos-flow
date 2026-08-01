@@ -17,6 +17,7 @@ import type { WorkflowValidationResult } from "../../domain/workflow";
 import { AssetLibrary } from "../library/AssetLibrary";
 import { ActivityTimeline } from "../run/ActivityTimeline";
 import { useWorkflowRun } from "../run/useWorkflowRun";
+import { fetchCursorCapability } from "../settings/cursorApi";
 import {
   validateWorkflow,
   WorkflowValidateError,
@@ -32,6 +33,7 @@ import { edgeTypes } from "./edges";
 import { NodeInspector } from "./NodeInspector";
 import { NodePalette } from "./NodePalette";
 import { createNode } from "./nodeFactory";
+import type { SkillNodeData } from "./nodeData";
 import { nodeTypes } from "./nodes";
 import { nodeKindFromFlowType, type NodeKind } from "./nodeKinds";
 import { uiGraphToDomainWorkflow } from "./toDomainWorkflow";
@@ -44,10 +46,12 @@ const NEW_WORKFLOW_CONFIRM =
   "Create a new workflow? The current canvas and saved draft will be cleared.";
 const RESET_DRAFT_CONFIRM =
   "Reset the saved draft? The current canvas and browser draft will be cleared.";
+const CURSOR_RUN_CONFIRM =
+  "Run this workflow with the Cursor CLI? Review Settings → Cursor command dry-run first. This will spawn the local agent.";
 
 /**
- * Phase 7–18: inspector, draft, validate, live runs, cancel, asset library,
- * Rules attachments in run trace.
+ * Phase 7–24: inspector, draft, validate, live runs, cancel, asset library,
+ * Rules/KB attachments, per-Skill Fake or Cursor runner.
  */
 function WorkflowCanvasInner() {
   const { screenToFlowPosition } = useReactFlow();
@@ -240,6 +244,16 @@ function WorkflowCanvasInner() {
     }
   }, [nodes, edges, showFeedback]);
 
+  const hasCursorSkill = useMemo(
+    () =>
+      nodes.some((node) => {
+        if (nodeKindFromFlowType(node.type) !== "skill") return false;
+        const data = node.data as SkillNodeData;
+        return data.runner === "cursor";
+      }),
+    [nodes],
+  );
+
   const handleRunWorkflow = useCallback(async () => {
     const mapped = uiGraphToDomainWorkflow(nodes, edges);
     if (!mapped.ok) {
@@ -247,6 +261,46 @@ function WorkflowCanvasInner() {
       return;
     }
     try {
+      const usesCursor = mapped.workflow.nodes.some(
+        (node) =>
+          node.kind === "skill" &&
+          (node.settings as { runner?: string }).runner === "cursor",
+      );
+      if (usesCursor) {
+        if (!window.confirm(CURSOR_RUN_CONFIRM)) {
+          return;
+        }
+        const capability = await fetchCursorCapability();
+        if (capability.status !== "available" || !capability.executable) {
+          showFeedback(
+            capability.message ||
+              "Cursor CLI is not available. Check Settings → Cursor CLI.",
+          );
+          return;
+        }
+        const created = await workflowRun.start(mapped.workflow, {
+          runner: "fake",
+          cursor: {
+            executable: capability.executable,
+            features: capability.features,
+            trust: true,
+            force: false,
+            outputFormat: "text",
+            confirmed: true,
+          },
+        });
+        if (created.status === "rejected") {
+          showFeedback(
+            created.errors[0]?.message ?? "Workflow rejected for execution.",
+          );
+          return;
+        }
+        showFeedback(
+          "Run started (includes Cursor Skills) — watch live progress on the canvas.",
+        );
+        return;
+      }
+
       const created = await workflowRun.start(mapped.workflow);
       if (created.status === "rejected") {
         showFeedback(
@@ -407,6 +461,7 @@ function WorkflowCanvasInner() {
         }}
         running={workflowRun.isLive}
         canRun={nodes.length > 0 && !workflowRun.isLive}
+        hasCursorSkill={hasCursorSkill}
       />
       <NodeInspector
         node={selectedNode}

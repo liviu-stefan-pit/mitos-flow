@@ -87,10 +87,12 @@ def validate_workflow_endpoint(workflow: Workflow) -> WorkflowValidationResult:
 @app.post("/api/runs", response_model=RunResponse)
 def create_run(request: RunRequest) -> RunResponse:
     """
-    Start a workflow run (fake runner).
+    Start a workflow run (fake or Cursor runner).
 
     Returns immediately with status ``queued`` (or ``rejected``). Subscribe to
     ``GET /api/runs/{id}/events`` for live progress (Phase 15).
+    Phase 23: set ``options.runner`` to ``cursor`` with confirmed Cursor options
+    to spawn the CLI for Input → Skill → Output.
     """
     return start_run(request.workflow, options=request.options)
 

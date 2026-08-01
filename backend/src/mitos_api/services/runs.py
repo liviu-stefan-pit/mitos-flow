@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeout
 from typing import Any
 
+from mitos_api.domain.cursor import RunnerUsage
 from mitos_api.domain.run import (
     NodeRunResult,
     NodeRunState,
@@ -19,14 +20,17 @@ from mitos_api.domain.run import (
     RunResponse,
 )
 from mitos_api.domain.validation import validate_workflow
+from mitos_api.domain.run import RunnerKind
 from mitos_api.domain.workflow import (
     AttachedKnowledgeBase,
     AttachedRule,
     CitedChunk,
     InputNodeSettings,
     NodeKind,
+    SkillNodeSettings,
     ValidationIssue,
     Workflow,
+    WorkflowNode,
 )
 from mitos_api.services.kb.retrieval import (
     build_retrieval_query,
@@ -34,7 +38,9 @@ from mitos_api.services.kb.retrieval import (
 )
 from mitos_api.services.run_store import RunStore, run_store
 from mitos_api.services.runners.base import Runner, SkillExecutionRequest
+from mitos_api.services.runners.cursor import CursorRunner
 from mitos_api.services.runners.fake import FakeRunner
+from mitos_api.services.cursor.command_builder import CursorCommandBuildError
 from mitos_api.services.scheduler import (
     collect_attached_knowledge_bases,
     collect_attached_rules,
@@ -67,6 +73,36 @@ def _call_cleanup(runner: Runner, skill_node_id: str) -> None:
         cleanup(skill_node_id)
 
 
+def _skill_runner_kind(
+    skill_node: WorkflowNode,
+    options: RunOptions,
+) -> RunnerKind:
+    """
+    Resolve Fake vs Cursor for one Skill (Phase 24).
+
+    Per-node ``settings.runner='cursor'`` selects Cursor. Whole-run
+    ``options.runner='cursor'`` (Phase 23) still forces Cursor for every Skill.
+    """
+    settings = skill_node.settings
+    if isinstance(settings, SkillNodeSettings) and settings.runner == "cursor":
+        return "cursor"
+    return options.runner
+
+
+def _workflow_needs_cursor(workflow: Workflow, options: RunOptions) -> bool:
+    if options.runner == "cursor":
+        return True
+    for node in workflow.nodes:
+        if node.kind != NodeKind.SKILL:
+            continue
+        if (
+            isinstance(node.settings, SkillNodeSettings)
+            and node.settings.runner == "cursor"
+        ):
+            return True
+    return False
+
+
 def _execute_skill_with_timeout(
     runner: Runner,
     request: SkillExecutionRequest,
@@ -92,6 +128,7 @@ def execute_run(
     workflow: Workflow,
     *,
     runner: Runner | None = None,
+    cursor_runner: Runner | None = None,
     options: RunOptions | None = None,
     on_event: EventCallback | None = None,
     is_cancelled: CancelCheck | None = None,
@@ -108,13 +145,37 @@ def execute_run(
     Knowledge Base attachments and runs deterministic keyword retrieval so
     cited chunks are available to the runner and run trace. Phase 20 applies
     per-attachment top-K / threshold and records the retrieval query in the
-    Skill run trace. Failure, timeout,
+    Skill run trace. Phase 24 selects Fake or Cursor per Skill via
+    ``settings.runner`` (scheduler semantics unchanged). Failure, timeout,
     blocked join, or cancel stops the chain so no downstream node starts.
+
+    When ``runner`` is provided without ``cursor_runner``, that single runner
+    is used for every Skill (test injection / Phase 23 whole-run).
     """
     rid = run_id or str(uuid.uuid4())
-    active_runner: Runner = runner if runner is not None else FakeRunner()
     opts = options or RunOptions()
+    fake_runner: Runner = FakeRunner()
+    # Explicit ``runner`` alone = whole-run override (tests + Phase 23 inject).
+    forced_runner: Runner | None = None
+    if runner is not None and cursor_runner is None:
+        forced_runner = runner
+    elif runner is not None:
+        fake_runner = runner
+    active_cursor: Runner | None = cursor_runner
     cancel_check: CancelCheck = is_cancelled or (lambda: False)
+
+    def pick_runner(skill_node: WorkflowNode) -> Runner:
+        if forced_runner is not None:
+            return forced_runner
+        kind = _skill_runner_kind(skill_node, opts)
+        if kind == "cursor":
+            if active_cursor is None:
+                raise RuntimeError(
+                    f"Cursor runner required for Skill '{skill_node.id}' "
+                    "but was not resolved."
+                )
+            return active_cursor
+        return fake_runner
 
     def emit(
         event_type: RunEventType,
@@ -128,6 +189,11 @@ def execute_run(
         attached_rules: list[AttachedRule] | None = None,
         knowledge_chunks: list[CitedChunk] | None = None,
         knowledge_query: str | None = None,
+        stdout: str | None = None,
+        stderr: str | None = None,
+        exit_code: int | None = None,
+        elapsed_ms: int | None = None,
+        usage: RunnerUsage | None = None,
     ) -> None:
         if on_event is not None:
             on_event(
@@ -141,6 +207,11 @@ def execute_run(
                 attached_rules=attached_rules,
                 knowledge_chunks=knowledge_chunks,
                 knowledge_query=knowledge_query,
+                stdout=stdout,
+                stderr=stderr,
+                exit_code=exit_code,
+                elapsed_ms=elapsed_ms,
+                usage=usage,
             )
 
     validation = validate_workflow(workflow)
@@ -448,6 +519,7 @@ def execute_run(
             )
 
         skill_node = remaining_skills.pop(0)
+        active_runner = pick_runner(skill_node)
         emit(RunEventType.QUEUED, node_id=skill_node.id)
 
         envelopes, blocked = collect_input_envelopes(
@@ -630,6 +702,21 @@ def execute_run(
                 message_parts.append(
                     f"Attached {len(attached_kbs)} KB(s) with no keyword matches: {kb_labels}"
                 )
+        if skill_result.elapsedMs is not None:
+            message_parts.append(f"elapsed {skill_result.elapsedMs}ms")
+        if skill_result.exitCode is not None:
+            message_parts.append(f"exit {skill_result.exitCode}")
+        if skill_result.usage is not None:
+            usage = skill_result.usage
+            token_bits: list[str] = []
+            if usage.inputTokens is not None:
+                token_bits.append(f"in={usage.inputTokens}")
+            if usage.outputTokens is not None:
+                token_bits.append(f"out={usage.outputTokens}")
+            if usage.totalTokens is not None:
+                token_bits.append(f"total={usage.totalTokens}")
+            if token_bits:
+                message_parts.append(f"usage [{', '.join(token_bits)}]")
         skill_message = "; ".join(message_parts) if message_parts else None
         node_results.append(
             NodeRunResult(
@@ -640,6 +727,11 @@ def execute_run(
                 attachedRules=attached_rules,
                 knowledgeChunks=knowledge_chunks,
                 knowledgeQuery=knowledge_query,
+                stdout=skill_result.stdout,
+                stderr=skill_result.stderr,
+                exitCode=skill_result.exitCode,
+                elapsedMs=skill_result.elapsedMs,
+                usage=skill_result.usage,
             )
         )
         completed_outputs[skill_node.id] = (payload, media_type)
@@ -654,6 +746,11 @@ def execute_run(
             attached_rules=attached_rules,
             knowledge_chunks=knowledge_chunks,
             knowledge_query=knowledge_query,
+            stdout=skill_result.stdout,
+            stderr=skill_result.stderr,
+            exit_code=skill_result.exitCode,
+            elapsed_ms=skill_result.elapsedMs,
+            usage=skill_result.usage,
         )
 
     if cancel_check():
@@ -759,6 +856,75 @@ def execute_run(
     )
 
 
+def _reject_cursor_unconfirmed() -> RunResponse:
+    rid = str(uuid.uuid4())
+    return RunResponse(
+        id=rid,
+        status="rejected",
+        errors=[
+            ValidationIssue(
+                code="cursor_confirmation_required",
+                message=(
+                    "Cursor runner requires options.cursor.confirmed=true "
+                    "after reviewing the dry-run command preview."
+                ),
+            )
+        ],
+    )
+
+
+def _resolve_cursor_runner(
+    options: RunOptions,
+) -> Runner | RunResponse:
+    """Build a CursorRunner from run options, or a rejected response."""
+    cursor_opts = options.cursor
+    if cursor_opts is None or not cursor_opts.confirmed:
+        return _reject_cursor_unconfirmed()
+
+    try:
+        return CursorRunner.from_options(cursor_opts)
+    except CursorCommandBuildError as exc:
+        rid = str(uuid.uuid4())
+        return RunResponse(
+            id=rid,
+            status="rejected",
+            errors=[
+                ValidationIssue(
+                    code=exc.code,
+                    message=exc.message,
+                )
+            ],
+        )
+
+
+def _resolve_runners(
+    workflow: Workflow,
+    options: RunOptions,
+    *,
+    explicit: Runner | None,
+) -> tuple[Runner | None, Runner | None] | RunResponse:
+    """
+    Resolve Fake + optional Cursor runners for a run (Phase 24).
+
+    Returns ``(fake_or_forced, cursor_or_none)``:
+    - When ``explicit`` is set, it is used as a whole-run forced runner
+      (second element None) — Phase 23 / test injection.
+    - Otherwise Fake is always available; Cursor is built when any Skill
+      needs it (``options.runner='cursor'`` or ``settings.runner='cursor'``).
+    """
+    if explicit is not None:
+        return (explicit, None)
+
+    needs_cursor = _workflow_needs_cursor(workflow, options)
+    if not needs_cursor:
+        return (FakeRunner(), None)
+
+    cursor = _resolve_cursor_runner(options)
+    if isinstance(cursor, RunResponse):
+        return cursor
+    return (FakeRunner(), cursor)
+
+
 def start_run(
     workflow: Workflow,
     *,
@@ -770,6 +936,10 @@ def start_run(
     Validate and start a background run. Returns immediately with queued/rejected.
 
     Live progress is available via the run store / SSE endpoint.
+    Phase 23: set ``options.runner="cursor"`` with confirmed Cursor options to
+    spawn the Cursor CLI for each Skill (Input → Skill → Output).
+    Phase 24: set ``skill.settings.runner="cursor"`` on individual Skills for
+    mixed Fake/Cursor chains and joins (scheduler semantics unchanged).
     """
     active_store = store or run_store
     opts = options or RunOptions()
@@ -793,9 +963,13 @@ def start_run(
             errors=shape_errors,
         )
 
+    resolved = _resolve_runners(workflow, opts, explicit=runner)
+    if isinstance(resolved, RunResponse):
+        return resolved
+    fake_or_forced, cursor_runner = resolved
+
     record = active_store.create(status="queued")
     rid = record.id
-    active_runner: Runner = runner if runner is not None else FakeRunner()
     # Snapshot before starting the worker so POST always returns queued
     # (avoids a race when delayMs=0 finishes instantly).
     initial = record.snapshot(include_events=False)
@@ -803,14 +977,27 @@ def start_run(
     def _worker() -> None:
         try:
             active_store.update_status(rid, "running")
-            result = execute_run(
-                workflow,
-                runner=active_runner,
-                options=opts,
-                on_event=active_store.event_callback(rid),
-                is_cancelled=lambda: active_store.is_cancel_requested(rid),
-                run_id=rid,
-            )
+            # Whole-run forced runner when cursor_runner is None and explicit
+            # was provided; otherwise pass Fake + Cursor for per-node pick.
+            if cursor_runner is None and runner is not None:
+                result = execute_run(
+                    workflow,
+                    runner=fake_or_forced,
+                    options=opts,
+                    on_event=active_store.event_callback(rid),
+                    is_cancelled=lambda: active_store.is_cancel_requested(rid),
+                    run_id=rid,
+                )
+            else:
+                result = execute_run(
+                    workflow,
+                    runner=fake_or_forced,
+                    cursor_runner=cursor_runner,
+                    options=opts,
+                    on_event=active_store.event_callback(rid),
+                    is_cancelled=lambda: active_store.is_cancel_requested(rid),
+                    run_id=rid,
+                )
             active_store.set_results(
                 rid,
                 status=result.status,

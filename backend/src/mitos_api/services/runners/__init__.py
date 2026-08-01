@@ -5,9 +5,11 @@ from mitos_api.services.runners.base import (
     SkillExecutionRequest,
     SkillExecutionResult,
 )
+from mitos_api.services.runners.cursor import CursorRunner
 from mitos_api.services.runners.fake import FakeRunner
 
 __all__ = [
+    "CursorRunner",
     "FakeRunner",
     "Runner",
     "SkillExecutionRequest",

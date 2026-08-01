@@ -88,6 +88,10 @@ function normalizeNodeData(
         label,
         description:
           typeof record.description === "string" ? record.description : "",
+        runner:
+          record.runner === "cursor" || record.runner === "fake"
+            ? record.runner
+            : "fake",
       };
     case "knowledgeBase":
       return {

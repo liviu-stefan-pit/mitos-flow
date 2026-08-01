@@ -29,6 +29,19 @@
   color: #1a1a2e;
 }
 
+.graph-node-runner {
+  margin-top: 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.graph-node-runner.runner-cursor {
+  color: #7c3aed;
+}
+
 .graph-node-input {
   border-left: 3px solid #3b82f6;
 }

@@ -6,6 +6,7 @@ from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from mitos_api.domain.cursor import RunnerUsage
 from mitos_api.domain.workflow import AttachedRule, CitedChunk, InputEnvelope
 
 
@@ -25,12 +26,18 @@ class SkillExecutionRequest(BaseModel):
 
 
 class SkillExecutionResult(BaseModel):
-    """Deterministic result from a Skill runner."""
+    """Result from a Skill runner (fake or Cursor)."""
 
     model_config = ConfigDict(extra="forbid")
 
     outputPayload: str
     mediaType: str = "text/plain"
+    # Phase 23 — optional process capture (Cursor runner)
+    stdout: str | None = None
+    stderr: str | None = None
+    exitCode: int | None = None
+    elapsedMs: int | None = None
+    usage: RunnerUsage | None = None
 
 
 class Runner(Protocol):

@@ -40,6 +40,8 @@ export type InputNodeSettings = {
 export type SkillNodeSettings = {
   description: string;
   joinPolicy: JoinPolicy;
+  /** Phase 24: per-Skill Fake or Cursor runner. */
+  runner?: "fake" | "cursor";
 };
 
 export type KnowledgeBaseNodeSettings = {
@@ -143,7 +145,7 @@ export function defaultSettingsForKind(kind: NodeKind): NodeSettings {
     case "input":
       return { mediaType: "text/plain", content: "" };
     case "skill":
-      return { description: "", joinPolicy: "wait_for_all" };
+      return { description: "", joinPolicy: "wait_for_all", runner: "fake" };
     case "knowledgeBase":
       return { description: "", content: "", libraryAssetId: null };
     case "rules":

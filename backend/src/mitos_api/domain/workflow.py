@@ -83,11 +83,16 @@ class InputNodeSettings(BaseModel):
     content: str = ""
 
 
+SkillRunnerKind = Literal["fake", "cursor"]
+
+
 class SkillNodeSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     description: str = ""
     joinPolicy: JoinPolicy = JoinPolicy.WAIT_FOR_ALL
+    # Phase 24: per-Skill Fake or Cursor runner (default fake).
+    runner: SkillRunnerKind = "fake"
 
 
 class KnowledgeBaseNodeSettings(BaseModel):

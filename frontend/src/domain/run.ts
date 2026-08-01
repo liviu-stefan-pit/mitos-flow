@@ -1,7 +1,8 @@
 /**
- * Run / SSE domain types — mirrors backend (Phases 15–16).
+ * Run / SSE domain types — mirrors backend (Phases 15–16, 23).
  */
 
+import type { CursorFeatureFlags } from "./cursor";
 import type { ValidationIssue, Workflow } from "./workflow";
 
 export type NodeRunState =
@@ -35,9 +36,33 @@ export type RunEventType =
 
 export type RunEventScope = "run" | "node";
 
+export type RunnerKind = "fake" | "cursor";
+
+export type RunnerUsage = {
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  totalTokens?: number | null;
+  source?: string | null;
+};
+
+export type CursorRunOptions = {
+  executable?: string | null;
+  workspace?: string | null;
+  features?: CursorFeatureFlags | null;
+  model?: string | null;
+  apiKey?: string | null;
+  timeoutMs?: number;
+  force?: boolean;
+  trust?: boolean;
+  outputFormat?: string;
+  confirmed?: boolean;
+};
+
 export type RunOptions = {
   delayMs?: number;
   nodeTimeoutMs?: number | null;
+  runner?: RunnerKind;
+  cursor?: CursorRunOptions | null;
 };
 
 export type RunRequest = {
@@ -54,6 +79,11 @@ export type NodeRunResult = {
   attachedRules?: AttachedRule[];
   knowledgeChunks?: CitedChunk[];
   knowledgeQuery?: string | null;
+  stdout?: string | null;
+  stderr?: string | null;
+  exitCode?: number | null;
+  elapsedMs?: number | null;
+  usage?: RunnerUsage | null;
 };
 
 export type AttachedRule = {
@@ -87,6 +117,11 @@ export type RunEvent = {
   attachedRules?: AttachedRule[];
   knowledgeChunks?: CitedChunk[];
   knowledgeQuery?: string | null;
+  stdout?: string | null;
+  stderr?: string | null;
+  exitCode?: number | null;
+  elapsedMs?: number | null;
+  usage?: RunnerUsage | null;
   timestamp: string;
 };
 

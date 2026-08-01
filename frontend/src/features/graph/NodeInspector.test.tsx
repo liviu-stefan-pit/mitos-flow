@@ -84,3 +84,30 @@ describe("NodeInspector — KB retrieval controls (Phase 20)", () => {
     });
   });
 });
+
+describe("NodeInspector — Skill runner (Phase 24)", () => {
+  it("selects Fake or Cursor runner for the Skill only", () => {
+    const onUpdateData = vi.fn();
+    const node: Node = {
+      id: "skill-1",
+      type: "skill",
+      selected: true,
+      position: { x: 0, y: 0 },
+      data: { label: "Draft", description: "", runner: "fake" },
+    };
+
+    render(
+      <NodeInspector
+        node={node}
+        nodes={[node]}
+        edges={[]}
+        onUpdateData={onUpdateData}
+        onUpdateEdgeData={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("inspector-runner-fake")).toBeChecked();
+    fireEvent.click(screen.getByTestId("inspector-runner-cursor"));
+    expect(onUpdateData).toHaveBeenCalledWith("skill-1", { runner: "cursor" });
+  });
+});

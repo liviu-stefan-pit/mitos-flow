@@ -7,12 +7,15 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from mitos_api.domain.cursor import CursorRunOptions, RunnerUsage
 from mitos_api.domain.workflow import (
     AttachedRule,
     CitedChunk,
     ValidationIssue,
     Workflow,
 )
+
+RunnerKind = Literal["fake", "cursor"]
 
 
 class NodeRunState(str, Enum):
@@ -56,7 +59,7 @@ RunStatus = Literal[
 
 
 class RunOptions(BaseModel):
-    """Execution options for live / cancellable fake runs."""
+    """Execution options for live / cancellable runs (fake or Cursor)."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -65,6 +68,21 @@ class RunOptions(BaseModel):
         default=None,
         ge=1,
         description="Per-Skill timeout; None means no timeout",
+    )
+    runner: RunnerKind = Field(
+        default="fake",
+        description=(
+            "Default / whole-run Skill runner (Phase 23). "
+            "Phase 24: Skills may override via settings.runner; "
+            "options.runner='cursor' still forces Cursor for every Skill."
+        ),
+    )
+    cursor: CursorRunOptions | None = Field(
+        default=None,
+        description=(
+            "Cursor spawn options when any Skill uses the Cursor runner "
+            "(options.runner='cursor' or skill.settings.runner='cursor')"
+        ),
     )
 
 
@@ -86,6 +104,12 @@ class NodeRunResult(BaseModel):
     attachedRules: list[AttachedRule] = Field(default_factory=list)
     knowledgeChunks: list[CitedChunk] = Field(default_factory=list)
     knowledgeQuery: str | None = None
+    # Phase 23 — Cursor process capture (present when runner is Cursor)
+    stdout: str | None = None
+    stderr: str | None = None
+    exitCode: int | None = None
+    elapsedMs: int | None = None
+    usage: RunnerUsage | None = None
 
 
 class RunEvent(BaseModel):
@@ -106,6 +130,11 @@ class RunEvent(BaseModel):
     attachedRules: list[AttachedRule] = Field(default_factory=list)
     knowledgeChunks: list[CitedChunk] = Field(default_factory=list)
     knowledgeQuery: str | None = None
+    stdout: str | None = None
+    stderr: str | None = None
+    exitCode: int | None = None
+    elapsedMs: int | None = None
+    usage: RunnerUsage | None = None
     timestamp: str
 
 

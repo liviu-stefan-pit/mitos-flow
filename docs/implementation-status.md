@@ -3,7 +3,7 @@
 > Running log of completed work. Update after each phase.
 
 **Last updated:** 2026-08-01  
-**Current phase:** 23 (next)
+**Current phase:** 25 (next)
 
 ---
 
@@ -35,6 +35,8 @@
 | 20.5 | 2026-08-01 | Fake-run regression harness: API workflow stories + Playwright smoke |
 | 21 | 2026-08-01 | Cursor CLI capability probe + Settings page |
 | 22 | 2026-08-01 | Cursor command builder + dry-run preview (no spawn) |
+| 23 | 2026-08-01 | Execute one Cursor Skill (spawn + capture; stub failure/timeout) |
+| 24 | 2026-08-01 | Per-Skill Fake/Cursor runners for chains and joins |
 
 ---
 
@@ -373,6 +375,40 @@
 
 ---
 
+### Phase 23 — Execute one Cursor Skill
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- `CursorRunner` spawns Phase 22 built argv+stdin; captures stdout, stderr, exit code, elapsed ms, best-effort usage metadata
+- Windows process-tree kill on timeout (`taskkill /T`) so `.cmd` wrappers do not hang
+- `POST /api/runs` accepts `options.runner: "cursor"` + `options.cursor` (requires `confirmed: true`)
+- Capture fields on `NodeRunResult` / SSE events; Activity timeline shows elapsed/exit/tokens when present
+- Canvas palette: Fake / Cursor runner radios; Cursor run confirms then probes capability before spawn
+- Gate fixture: `cursor_simple_linear.json`; stub executables under `tests/fixtures/cursor_stubs/`
+- Gate tests: success + usage capture; API failure + timeout with stubs; confirmation required
+- Backend tests: 135 passing (11 new in `test_cursor_execute.py`); frontend: 76+; `tsc -b --noEmit` clean
+- **Manual check:** Build Input → Skill → Output; select Cursor; confirm; run successfully against real Cursor CLI
+
+---
+
+### Phase 24 — Cursor execution for chains and joins
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- Per-Skill `settings.runner` (`fake` | `cursor`, default `fake`); scheduler/topo/join semantics unchanged
+- Mixed runs: FakeRunner + CursorRunner resolved together; each Skill picks its runner
+- Phase 23 compat: `options.runner="cursor"` still forces Cursor for every Skill
+- Confirmation still required when any Skill needs Cursor (`options.cursor.confirmed`)
+- Inspector: Fake/Cursor radios per Skill; canvas badge; Run button labels when Cursor Skills present
+- Gate fixtures: `cursor_two_skill_chain.json` (Cursor→Fake), `cursor_two_input_join.json`
+- Gate tests: chain + join complete with stubs; confirmation reject for per-node Cursor
+- Backend tests: 140 passing (5 new in `test_cursor_chains.py`); frontend: 77 passing; `tsc -b --noEmit` clean
+- **Manual check:** Multi-node flow with Cursor on one Skill only; Fake on the other; run completes
+
+---
+
 ## Known issues
 
 _None._
@@ -381,4 +417,4 @@ _None._
 
 ## Next up
 
-- Phase 23: Execute one Cursor Skill
+- Phase 25: Artifact Output destinations

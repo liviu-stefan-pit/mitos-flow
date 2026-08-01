@@ -71,7 +71,8 @@ const previewResponse: CursorDryRunResponse = {
   errors: [],
   confirmationRequired: true,
   confirmed: false,
-  message: "Review the redacted command preview, then confirm before a real Cursor spawn (Phase 23).",
+  message:
+    "Review the redacted command preview, then confirm and run with options.runner='cursor' (Phase 23).",
   spawned: false,
   preview: {
     argv: ["C:\\tools\\agent.exe", "--print", "--api-key", "***"],
@@ -172,7 +173,7 @@ describe("SettingsPage", () => {
         ...previewResponse,
         confirmed: true,
         message:
-          "Command preview confirmed. Spawning is deferred to Phase 23 (dry-run only).",
+          "Command preview confirmed. Start a run with options.runner='cursor' and options.cursor.confirmed=true to spawn the Cursor CLI.",
       });
 
     render(<SettingsPage />);

@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from queue import Empty, Queue
 from typing import Any
 
+from mitos_api.domain.cursor import RunnerUsage
 from mitos_api.domain.run import (
     NodeRunResult,
     RunEvent,
@@ -111,6 +112,11 @@ class RunStore:
         attached_rules: list[AttachedRule] | None = None,
         knowledge_chunks: list[CitedChunk] | None = None,
         knowledge_query: str | None = None,
+        stdout: str | None = None,
+        stderr: str | None = None,
+        exit_code: int | None = None,
+        elapsed_ms: int | None = None,
+        usage: RunnerUsage | None = None,
     ) -> RunEvent | None:
         record = self.get(run_id)
         if record is None:
@@ -150,6 +156,11 @@ class RunStore:
                 attachedRules=list(attached_rules or []),
                 knowledgeChunks=list(knowledge_chunks or []),
                 knowledgeQuery=knowledge_query,
+                stdout=stdout,
+                stderr=stderr,
+                exitCode=exit_code,
+                elapsedMs=elapsed_ms,
+                usage=usage,
                 timestamp=_utc_now_iso(),
             )
             record.events.append(event)
@@ -259,6 +270,11 @@ class RunStore:
             attached_rules: list[AttachedRule] | None = None,
             knowledge_chunks: list[CitedChunk] | None = None,
             knowledge_query: str | None = None,
+            stdout: str | None = None,
+            stderr: str | None = None,
+            exit_code: int | None = None,
+            elapsed_ms: int | None = None,
+            usage: RunnerUsage | None = None,
         ) -> None:
             self.append_event(
                 run_id,
@@ -272,6 +288,11 @@ class RunStore:
                 attached_rules=attached_rules,
                 knowledge_chunks=knowledge_chunks,
                 knowledge_query=knowledge_query,
+                stdout=stdout,
+                stderr=stderr,
+                exit_code=exit_code,
+                elapsed_ms=elapsed_ms,
+                usage=usage,
             )
 
         return _emit

@@ -116,7 +116,7 @@ One **Artifact Output** node replaces separate Save and Output nodes.
 1. User triggers a run via `POST /api/runs`.
 2. Workflow Service validates the graph (DAG, no dangling edges, valid edge kinds).
 3. Deterministic DAG scheduler topologically orders nodes.
-4. Scheduler dispatches each node to the configured runner (fake or Cursor CLI).
+4. Scheduler dispatches each Skill to its configured runner (per-node Fake or Cursor; Phase 24).
 5. Events stream to the UI via SSE (`queued` → `running` → `completed` / `failed`).
 6. Artifact Output nodes write results to the artifact store or pass-through preview.
 
@@ -139,6 +139,7 @@ One **Artifact Output** node replaces separate Save and Output nodes.
 | `/api/runs/{id}/cancel` | 16 | POST | Cancel an in-flight run |
 | `/api/cursor/capability` | 21 | GET | Cursor CLI capability probe |
 | `/api/cursor/dry-run` | 22 | POST | Build redacted Cursor command preview (no spawn) |
+| `/api/runs` | 23–24 | POST | Cursor via `options.runner=cursor` (whole-run) or per-Skill `settings.runner=cursor` |
 
 ---
 

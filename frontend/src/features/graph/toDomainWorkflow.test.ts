@@ -108,6 +108,7 @@ describe("uiGraphToDomainWorkflow", () => {
     expect(byId["skill-1"].settings).toEqual({
       description: "Draft launch notes",
       joinPolicy: "wait_for_all",
+      runner: "fake",
     });
     expect(byId["kb-1"].settings).toEqual({
       description: "Product handbook",

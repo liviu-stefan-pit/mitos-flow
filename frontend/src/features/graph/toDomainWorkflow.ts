@@ -155,10 +155,15 @@ function settingsFromUiData(kind: NodeKind, data: unknown): NodeSettings {
     }
     case "skill": {
       const skill = record as Partial<SkillNodeData>;
+      const runner =
+        skill.runner === "cursor" || skill.runner === "fake"
+          ? skill.runner
+          : "fake";
       return {
         description:
           typeof skill.description === "string" ? skill.description : "",
         joinPolicy: "wait_for_all",
+        runner,
       };
     }
     case "knowledgeBase": {

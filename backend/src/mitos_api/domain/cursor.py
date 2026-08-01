@@ -1,4 +1,4 @@
-"""Cursor CLI capability probe + dry-run models (Phases 21–22)."""
+"""Cursor CLI capability probe, dry-run, and execute models (Phases 21–23)."""
 
 from __future__ import annotations
 
@@ -39,6 +39,17 @@ class CursorFeatureFlags(BaseModel):
     trust: bool = False
     apiKey: bool = False
     streamPartialOutput: bool = False
+
+
+class RunnerUsage(BaseModel):
+    """Optional usage metadata captured from a Cursor CLI process (Phase 23)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    inputTokens: int | None = None
+    outputTokens: int | None = None
+    totalTokens: int | None = None
+    source: str | None = None
 
 
 class CursorCapabilityReport(BaseModel):
@@ -93,6 +104,27 @@ class CursorDryRunOptions(BaseModel):
     confirmed: bool = False
 
 
+class CursorRunOptions(BaseModel):
+    """
+    Options for spawning Cursor as the Skill runner (Phase 23).
+
+    ``confirmed`` must be true before a real spawn (Phase 22 preview gate).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    executable: str | None = None
+    workspace: str | None = None
+    features: CursorFeatureFlags | None = None
+    model: str | None = None
+    apiKey: str | None = None
+    timeoutMs: int = Field(default=DEFAULT_CURSOR_TIMEOUT_MS, gt=0)
+    force: bool = False
+    trust: bool = True
+    outputFormat: str = "text"
+    confirmed: bool = False
+
+
 class CursorDryRunRequest(BaseModel):
     """POST /api/cursor/dry-run body."""
 
@@ -117,7 +149,7 @@ class CursorCommandPreview(BaseModel):
 
 
 class CursorDryRunResponse(BaseModel):
-    """Dry-run result: preview only; ``spawned`` is always false in Phase 22."""
+    """Dry-run result: preview only; ``spawned`` is always false."""
 
     model_config = ConfigDict(extra="forbid")
 

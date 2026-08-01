@@ -214,8 +214,8 @@ export function SettingsPage() {
             <h2 id="cursor-dry-run-heading">Cursor command dry-run</h2>
             <p className="settings-section-blurb">
               Builds argv + stdin from a sample Skill request without spawning.
-              Secrets are redacted in the preview. Confirm after reviewing —
-              real execution arrives in Phase 23.
+              Secrets are redacted in the preview. Confirm after reviewing, then
+              use Fake/Cursor on the canvas to run Input → Skill → Output.
             </p>
           </div>
         </div>

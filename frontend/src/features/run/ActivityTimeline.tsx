@@ -128,6 +128,24 @@ export function ActivityTimeline({
                   ))}
                 </ul>
               ) : null}
+              {event.elapsedMs != null || event.exitCode != null ? (
+                <span
+                  className="activity-event-capture"
+                  data-testid="activity-cursor-capture"
+                >
+                  {event.elapsedMs != null ? `${event.elapsedMs}ms` : null}
+                  {event.elapsedMs != null && event.exitCode != null
+                    ? " · "
+                    : null}
+                  {event.exitCode != null ? `exit ${event.exitCode}` : null}
+                  {event.usage?.totalTokens != null
+                    ? ` · tokens ${event.usage.totalTokens}`
+                    : event.usage?.inputTokens != null ||
+                        event.usage?.outputTokens != null
+                      ? ` · tokens in=${event.usage.inputTokens ?? "?"} out=${event.usage.outputTokens ?? "?"}`
+                      : null}
+                </span>
+              ) : null}
               {event.error ? (
                 <span className="activity-event-error">{event.error}</span>
               ) : null}

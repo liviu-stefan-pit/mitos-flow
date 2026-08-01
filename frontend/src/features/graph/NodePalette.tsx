@@ -14,6 +14,8 @@ type NodePaletteProps = {
   onCancelRun?: () => void;
   running?: boolean;
   canRun?: boolean;
+  /** True when any Skill on the canvas uses the Cursor runner. */
+  hasCursorSkill?: boolean;
 };
 
 export function NodePalette({
@@ -29,6 +31,7 @@ export function NodePalette({
   onCancelRun,
   running = false,
   canRun = true,
+  hasCursorSkill = false,
 }: NodePaletteProps) {
   return (
     <div className="node-palette" data-testid="node-palette">
@@ -94,13 +97,20 @@ export function NodePalette({
       {onRunWorkflow ? (
         <div className="node-palette-section node-palette-run-actions">
           <span className="node-palette-label">Run</span>
+          <p className="node-palette-hint" data-testid="palette-runner-hint">
+            Per-Skill runner is set in the inspector (Fake or Cursor).
+          </p>
           <button
             type="button"
             data-testid="palette-run-workflow"
             disabled={!canRun || running}
             onClick={onRunWorkflow}
           >
-            {running ? "Running…" : "Run workflow"}
+            {running
+              ? "Running…"
+              : hasCursorSkill
+                ? "Run (includes Cursor)"
+                : "Run workflow"}
           </button>
           <button
             type="button"

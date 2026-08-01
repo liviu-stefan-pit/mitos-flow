@@ -338,7 +338,7 @@ def test_dry_run_api_endpoint_and_confirmation(tmp_path: Path, monkeypatch: pyte
     confirmed = second.json()
     assert confirmed["confirmed"] is True
     assert confirmed["spawned"] is False
-    assert "Phase 23" in confirmed["message"]
+    assert "runner='cursor'" in confirmed["message"]
 
 
 def test_dry_run_api_rejects_path_escape(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
