@@ -2,9 +2,9 @@ import json
 import os
 from collections.abc import Iterator
 
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 
 from mitos_api.domain import (
     CancelRunResponse,
@@ -12,6 +12,9 @@ from mitos_api.domain import (
     CursorDryRunRequest,
     CursorDryRunResponse,
     CursorModelsReport,
+    FlowExportPreviewResponse,
+    FlowExportRequest,
+    FlowImportResponse,
     LibraryAsset,
     LibraryBatchImportRequest,
     LibraryBatchImportResponse,
@@ -31,6 +34,12 @@ from mitos_api.services.cursor import (
     dry_run_cursor_command,
     get_cursor_capability,
     get_cursor_models,
+)
+from mitos_api.services.flow_package import (
+    FlowPackageError,
+    export_flow_package,
+    import_flow_package,
+    preview_flow_package,
 )
 from mitos_api.services.library import (
     confirm_import,
@@ -98,6 +107,63 @@ def cursor_dry_run(body: CursorDryRunRequest) -> CursorDryRunResponse:
 def validate_workflow_endpoint(workflow: Workflow) -> WorkflowValidationResult:
     """Validate a workflow document. Does not save or execute."""
     return validate_workflow(workflow)
+
+
+@app.post("/api/workflows/export/preview", response_model=FlowExportPreviewResponse)
+def export_workflow_preview_endpoint(body: FlowExportRequest) -> FlowExportPreviewResponse:
+    """
+    Inventory preview for a planned ``.flow`` export (Phase 30).
+
+    Returns member paths, per-asset sizes, and size/sensitivity warnings
+    without writing a zip. Bundle contents of a subsequent export should
+    match this preview's ``memberPaths``.
+    """
+    try:
+        return preview_flow_package(body)
+    except FlowPackageError as exc:
+        raise HTTPException(
+            status_code=400, detail={"code": exc.code, "message": exc.message}
+        ) from exc
+
+
+@app.post("/api/workflows/export")
+def export_workflow_endpoint(body: FlowExportRequest) -> Response:
+    """
+    Export a workflow as a versioned ``.flow`` zip (Phases 29–30).
+
+    Packaging modes:
+    - ``reference`` — graph + manifests + checksums (no source docs)
+    - ``snapshot`` — also embeds Skill/Rules ``original.*``
+    - ``embedded`` — also embeds KB source documents
+    """
+    try:
+        zip_bytes, _referenced, _warnings = export_flow_package(body)
+    except FlowPackageError as exc:
+        raise HTTPException(status_code=400, detail={"code": exc.code, "message": exc.message}) from exc
+
+    name = (body.workflow.metadata.name or "workflow").strip() or "workflow"
+    safe = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in name)[:80]
+    filename = f"{safe}.flow"
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.post("/api/workflows/import", response_model=FlowImportResponse)
+async def import_workflow_endpoint(
+    file: UploadFile = File(...),
+) -> FlowImportResponse:
+    """
+    Import a ``.flow`` zip (Phases 29–30).
+
+    Validates archive paths, sizes, format version, packaging-mode original
+    rules, and checksums before restoring library assets. Returns the
+    workflow graph.
+    """
+    archive_bytes = await file.read()
+    return import_flow_package(archive_bytes)
 
 
 @app.post("/api/runs", response_model=RunResponse)

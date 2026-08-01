@@ -143,6 +143,9 @@ One **Artifact Output** node replaces separate Save and Output nodes.
 | `/api/cursor/dry-run` | 22 | POST | Build redacted Cursor command preview (no spawn) |
 | `/api/cursor/models` | 24.5 | GET | List Cursor models (`agent --list-models`); default `composer-2.5` |
 | `/api/runs` | 23–24 | POST | Cursor via `options.runner=cursor` (whole-run) or per-Skill `settings.runner=cursor` |
+| `/api/workflows/export` | 29–30 | POST | Export `.flow` zip (`reference` / `snapshot` / `embedded`) |
+| `/api/workflows/export/preview` | 30 | POST | Inventory preview (member paths, sizes, size/sensitivity warnings) |
+| `/api/workflows/import` | 29–30 | POST | Import `.flow` zip (validate paths/sizes/checksums/mode; restore assets) |
 
 ### Artifact Output destinations (Phase 25)
 
@@ -206,6 +209,50 @@ Skill nodes mirror Rules/KB **Apply from library**: `content` (SKILL.md body) + 
 
 Skills expose two amber resource-in handles — **top** (`resource-in-top`) and **bottom** (`resource-in`) — layout aliases only; attachment resolution is unchanged.
 
+### Workflow packages (Phases 29–30)
+
+Versioned ``.flow`` zip archives port a workflow graph between local instances.
+
+| Constant | Value |
+| --- | --- |
+| `FLOW_FORMAT_VERSION` | `1` |
+| `packagingMode` | `reference` · `snapshot` · `embedded` |
+
+| Mode | Manifests | Skill/Rules `original.*` | KB `original.*` |
+| --- | --- | --- | --- |
+| `reference` | yes | no | no |
+| `snapshot` | yes | yes | no |
+| `embedded` | yes | yes | yes |
+
+Archive layout:
+
+```
+archive.flow  (ZIP)
+├── format.json       # formatVersion, packagingMode, createdAt, app
+├── workflow.json     # full domain Workflow (inlined node content + libraryAssetId)
+├── checksums.json    # sha256 of every member except itself
+└── assets/
+    ├── skills/<id>/manifest.json  [+ original.md when snapshot/embedded]
+    ├── rules/<id>/manifest.json   [+ original.mdc|md when snapshot/embedded]
+    └── kb/<id>/manifest.json      [+ original.txt|md when embedded only]
+```
+
+**Reference mode** includes library **manifests** for referenced `libraryAssetId`s but **never** embeds `original.*` source docs (especially KB). Graph nodes already carry inlined `content`, so the workflow remains runnable after import.
+
+**Snapshot mode** opt-in embeds Skill/Rules originals (exact managed library bytes) while KB stays reference-only.
+
+**Embedded mode** also embeds KB source documents. Export preview (`POST /api/workflows/export/preview`) returns an inventory of member paths, per-asset sizes, and warnings (`sensitivity_embedded_kb`, `large_asset`, `large_package`) so callers can confirm before exporting. Bundle member paths must match the preview.
+
+Import validates member paths (zip-slip), sizes, format version, packaging-mode original rules, and checksums **before** writing anything; missing referenced assets on export become warnings.
+
+### Regression suite (Phase 31)
+
+Extends the Phase 20.5 harness:
+
+- API stories: fake-run + `.flow` portability (export → wipe → import → re-run), three-output matrix, Cursor stub
+- Playwright: export/import round-trip, chain + run summary, Cursor stubbed via `e2e/stubs/` (no real tokens in CI)
+- One documented **manual** Cursor smoke (playground `cursor-smoke`) — never required for automated gates
+
 ---
 
 ## Frontend architecture
@@ -258,4 +305,4 @@ Do not implement until Phase 31 baseline is stable:
 - Cursor CLI: workspace boundary checks, secret redaction in command preview
 - Artifact writes: constrained to approved output root; atomic file replacement
 - Import: managed local library only (no raw path access)
-- Export: zip-slip protection, checksum validation
+- Export/import (Phase 29): zip-slip protection, checksum validation, size limits; reference mode omits source docs

@@ -3,7 +3,7 @@
 > Running log of completed work. Update after each phase.
 
 **Last updated:** 2026-08-01  
-**Current phase:** 29 (next)
+**Current phase:** 31 (complete — v1 baseline)
 
 ---
 
@@ -43,6 +43,9 @@
 | 27 | 2026-08-01 | Prompted Artifact Output projections (explicit second model call) |
 | 28 | 2026-08-01 | Tokens, cost, and run summary (rate table + estimated cost UI) |
 | 28.5 | 2026-08-01 | Skill Apply from library + dual resource-in handles |
+| 29 | 2026-08-01 | Reference-mode `.flow` workflow export/import |
+| 30 | 2026-08-01 | Snapshot + embedded packaging modes; inventory preview |
+| 31 | 2026-08-01 | End-to-end regression suite (portability + Playwright matrix + Cursor stub) |
 
 ---
 
@@ -517,6 +520,61 @@
 
 ---
 
+### Phase 29 — Reference-mode workflow export/import
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- Versioned `.flow` zip (`FLOW_FORMAT_VERSION=1`, `packagingMode=reference`): `format.json`, `workflow.json`, `checksums.json`, `assets/{skills|rules|kb}/<id>/manifest.json`
+- Reference mode ships manifests only — **no** `original.*` KB/Skill/Rules source docs
+- `POST /api/workflows/export` → `application/zip`; `POST /api/workflows/import` (multipart file) → `FlowImportResponse`
+- Pre-extraction validation: zip-slip paths, member/archive size caps, SHA-256 checksums, unsupported `formatVersion`
+- Import restores library assets from manifests (synthesized originals) so `libraryAssetId` links stay valid
+- Dependency: `python-multipart` for multipart upload
+- Gate tests: round-trip, checksum failure, zip-slip, unsupported-version (`test_flow_package.py`)
+- Backend tests: 212 passing (9 new)
+- **Manual check:** `POST /api/workflows/export` with referenced Skill/Rules/KB → clear library → `POST /api/workflows/import` → graph + manifests restored
+
+---
+
+### Phase 30 — Snapshot and embedded resource modes
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- Packaging modes: `reference` (manifests only), `snapshot` (Skill/Rules `original.*`), `embedded` (KB source docs too)
+- `POST /api/workflows/export/preview` — inventory of member paths, per-asset sizes, size/sensitivity warnings
+- Export warnings: `sensitivity_embedded_kb`, `large_asset`, `large_package`
+- Import restores embedded originals exactly; reference/snapshot-without-KB still synthesizes from manifests
+- Mode rules enforced on import (snapshot rejects KB originals; reference rejects all originals)
+- Gate tests: round-trip per mode + preview member paths match export bundle (`test_flow_package.py`)
+- Backend tests: 220 passing (8 new Phase 30)
+- **Manual check:** `POST /api/workflows/export/preview` with `packagingMode=embedded` → export → zip members equal preview `memberPaths`
+
+---
+
+### Phase 31 — End-to-end regression suite
+
+**Status:** Complete  
+**Date:** 2026-08-01
+
+- Extends Phase 20.5 harness (does not invent E2E from scratch)
+- API stories in `backend/tests/test_regression_story.py`:
+  - Portability: playground import → fake run → export embedded `.flow` → wipe library → import → re-run (identical output/trace)
+  - Fuller matrix: Skill → pass-through + selector + prompted (2 model calls)
+  - Cursor stub story (no real CLI tokens)
+- Playwright extensions:
+  - `e2e/export-import-roundtrip.spec.ts` — UI fake-run + API export/import + restore draft + re-run
+  - `e2e/fuller-matrix.spec.ts` — Draft→Polish chain + run summary disclaimer
+  - `e2e/cursor-stub.spec.ts` — Cursor Skill via `e2e/stubs/cursor-agent(.cmd|.sh)`
+- E2E webServer sets `MITOS_CURSOR_CLI` to the stub so CI never spends real tokens
+- README: clean-clone setup, `test:regression` gate, documented manual Cursor smoke (playground `cursor-smoke`)
+- Gate: `npm test` + `npm run test:e2e` (set `CI=1` on Windows if a leftover `dev` server is up)
+- Backend tests: 223 passing (3 new Phase 31); frontend: 93; Playwright: 5 specs green
+- **Manual check:** Fresh clone → `npm install` → `npm run install:all` → `npx playwright install chromium` → `npm run test:regression` green; optional real Cursor smoke via playground README
+
+---
+
 ## Known issues
 
 _None._
@@ -525,4 +583,4 @@ _None._
 
 ## Next up
 
-- Phase 29: Reference-mode workflow export/import
+- v1 baseline complete (Phases 0–31). Deferred work is listed under **Deferred beyond Phase 31** in MASTER-PLAN.md.

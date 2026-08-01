@@ -3,7 +3,7 @@
 > **Purpose of this document:** Single source of truth for what Mitos Flow is, how it should be built, and which phase is done. Update checkboxes as phases complete. Point every implementation chat at this file first.
 
 **Last updated:** 2026-08-01  
-**Current phase:** 29 (next)  
+**Current phase:** 31 (complete — v1 baseline)  
 **Stack:** Local React/Vite frontend + FastAPI backend · Cursor CLI first · Fake runner before real CLI
 
 ---
@@ -122,7 +122,7 @@ Rules:
 | Per-Skill Cursor models | 24.5 | [x] |
 | Artifact outputs & observability | 25–28 | [x] |
 | Skill library apply + dual handles | 28.5 | [x] |
-| Portability & hardening | 29–31 | [ ] |
+| Portability & hardening | 29–31 | [x] |
 
 ---
 
@@ -349,19 +349,19 @@ Rules:
 
 ### Portability and hardening
 
-- [ ] **Phase 29 — Reference-mode workflow export/import**
+- [x] **Phase 29 — Reference-mode workflow export/import**
   - Versioned `.flow` zip: graph JSON, manifests, checksums, references (no KB source docs)
   - Validate archive paths and sizes before extraction
   - **Gate:** Round-trip, checksum failure, zip-slip, unsupported-version tests pass
   - **Manual check:** Export workflow; import on fresh instance; graph restored
 
-- [ ] **Phase 30 — Snapshot and embedded resource modes**
+- [x] **Phase 30 — Snapshot and embedded resource modes**
   - Opt-in snapshots of Skills/Rules; optional embedded KB content
   - Size and sensitivity warnings; inventory preview
   - **Gate:** Each packaging mode has round-trip tests
   - **Manual check:** Export embedded mode; verify bundle contents match preview
 
-- [ ] **Phase 31 — End-to-end regression suite**
+- [x] **Phase 31 — End-to-end regression suite**
   - Extends the Phase 20.5 harness (does not invent E2E from scratch)
   - Playwright: export/import + fuller matrix; Cursor stubbed in CI
   - One documented manual Cursor smoke test
@@ -470,6 +470,6 @@ _Use this section for quick notes when checking off phases. Detailed notes go in
 | 27 | 2026-08-01 | Prompted Artifact Output projections (explicit second model call) |
 | 28 | 2026-08-01 | Tokens, cost, and run summary (rate table + estimated cost UI) |
 | 28.5 | 2026-08-01 | Skill Apply from library + dual resource-in handles |
-| 29 | | |
-| 30 | | |
-| 31 | | |
+| 29 | 2026-08-01 | Reference-mode `.flow` export/import (checksums, zip-slip) |
+| 30 | 2026-08-01 | Snapshot + embedded packaging modes; inventory preview |
+| 31 | 2026-08-01 | E2E regression suite: portability story + Playwright matrix + Cursor stub |

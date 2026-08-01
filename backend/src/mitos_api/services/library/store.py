@@ -9,6 +9,8 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+import yaml
+
 from mitos_api.domain.library import (
     AssetKind,
     LibraryAsset,
@@ -50,6 +52,27 @@ def _original_filename_for(preview: NormalizedPreview) -> str:
     if lower.endswith(".mdc"):
         return "original.mdc"
     return "original.md"
+
+
+def _original_filename_from_manifest(manifest: LibraryAssetManifest) -> str:
+    lower = (manifest.originalFilename or "").lower()
+    if lower.endswith(".txt"):
+        return "original.txt"
+    if lower.endswith(".mdc"):
+        return "original.mdc"
+    if manifest.kind == AssetKind.RULES and not lower.endswith(".md"):
+        return "original.mdc"
+    return "original.md"
+
+
+def _synthesize_original(manifest: LibraryAssetManifest) -> str:
+    """Rebuild a readable original from stored frontmatter + body."""
+    fm = manifest.frontmatter or {}
+    body = manifest.body or ""
+    if not fm:
+        return body
+    dumped = yaml.safe_dump(fm, sort_keys=False, allow_unicode=True).rstrip()
+    return f"---\n{dumped}\n---\n{body}"
 
 
 class LibraryStore:
@@ -164,6 +187,52 @@ class LibraryStore:
                     return None
                 return LibraryAsset(manifest=manifest, originalContent=original)
             return None
+
+    def restore_from_manifest(self, manifest: LibraryAssetManifest) -> LibraryAsset:
+        """
+        Restore an asset from a reference-mode package manifest (Phase 29).
+
+        Synthesizes a minimal ``original.*`` from frontmatter + body so the
+        store layout stays compatible with ``get()``. Does not overwrite an
+        existing asset with the same id.
+        """
+        return self.restore_from_package(manifest, original_content=None)
+
+    def restore_from_package(
+        self,
+        manifest: LibraryAssetManifest,
+        *,
+        original_content: str | None = None,
+    ) -> LibraryAsset:
+        """
+        Restore an asset from a ``.flow`` package (Phases 29–30).
+
+        When ``original_content`` is provided (snapshot/embedded modes), write
+        those bytes as the managed ``original.*``. Otherwise synthesize from
+        frontmatter + body (reference mode). Does not overwrite an existing
+        asset with the same id.
+        """
+        with self._lock:
+            self._ensure_root()
+            existing = self.get(manifest.id)
+            if existing is not None:
+                return existing
+
+            asset_dir = self._asset_dir(manifest.kind, manifest.id)
+            asset_dir.mkdir(parents=True, exist_ok=False)
+
+            original_name = _original_filename_from_manifest(manifest)
+            content = (
+                original_content
+                if original_content is not None
+                else _synthesize_original(manifest)
+            )
+            (asset_dir / original_name).write_text(content, encoding="utf-8")
+            (asset_dir / "manifest.json").write_text(
+                manifest.model_dump_json(indent=2),
+                encoding="utf-8",
+            )
+            return LibraryAsset(manifest=manifest, originalContent=content)
 
     def clear(self) -> None:
         """Remove all stored assets (tests only)."""

@@ -2,7 +2,7 @@
 
 > Detailed phase specs mirroring MASTER-PLAN.md. Created in Phase 0.
 
-**Last updated:** 2026-07-26
+**Last updated:** 2026-08-01
 
 For the authoritative checklist and milestone tracker, see [MASTER-PLAN.md](../MASTER-PLAN.md).
 
@@ -105,4 +105,38 @@ _Specs in MASTER-PLAN.md. Not started._
 
 ## Portability & hardening (Phases 29–31)
 
-_Specs in MASTER-PLAN.md. Not started._
+### Phase 29 — Reference-mode workflow export/import
+
+**Deliverables:**
+- Versioned `.flow` zip (`FLOW_FORMAT_VERSION=1`, `packagingMode=reference`)
+- `POST /api/workflows/export` / `POST /api/workflows/import`
+- Zip-slip, size, checksum, and unsupported-version validation before extraction
+
+**Gate:** Round-trip, checksum failure, zip-slip, unsupported-version tests pass.
+
+**Manual check:** Export workflow; import on fresh instance; graph restored.
+
+### Phase 30 — Snapshot and embedded resource modes
+
+**Deliverables:**
+- `packagingMode=snapshot` (Skill/Rules originals) and `embedded` (KB source docs)
+- `POST /api/workflows/export/preview` inventory (paths, sizes, size/sensitivity warnings)
+- Round-trip import restores embedded originals exactly
+
+**Gate:** Each packaging mode has round-trip tests; preview member paths match export bundle.
+
+**Manual check:** Export embedded mode; verify bundle contents match preview.
+
+Phase 31 specs remain in MASTER-PLAN.md.
+
+### Phase 31 — End-to-end regression suite
+
+**Deliverables:**
+- Extends Phase 20.5 harness (API stories + Playwright) — does not invent E2E from scratch
+- API: complete fake-run + `.flow` portability story; three-output matrix; Cursor stub story
+- Playwright: export/import round-trip, chain + run summary matrix, Cursor stubbed via `e2e/stubs/`
+- README clean-clone setup + documented manual Cursor smoke (playground `cursor-smoke`)
+
+**Gate:** Clean-clone setup; `npm test` + `npm run test:e2e` pass on Windows (Cursor never real in CI).
+
+**Manual check:** Fresh clone → follow README → full fake flow works.

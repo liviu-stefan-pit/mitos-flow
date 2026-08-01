@@ -81,7 +81,9 @@ Drop files from here into the Asset library (Phase 17+), wire them on the canvas
 3. Attach only competitor-notes to Skill B
 4. Confirm traces do not cross-contaminate
 
-### Cursor smoke (Phase 23, manual / tokens)
+### Cursor smoke (Phase 31 manual — real CLI / tokens; not CI)
+
+Automated E2E stubs Cursor (`e2e/stubs/`). This playground path is the **documented manual** real-CLI smoke:
 
 1. Settings → Cursor CLI **Available** + `agent status` logged in
 2. Import `cursor-smoke` + `cursor-smoke-safety.mdc`
